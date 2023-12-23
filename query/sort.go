@@ -3,7 +3,7 @@ package query
 import (
 	"errors"
 
-	"github.com/expanse-agency/tycho/utils/helpers"
+	"github.com/expanse-agency/tycho/utils"
 )
 
 type Order string
@@ -35,7 +35,7 @@ type SortField struct {
 }
 
 func ParseSort(raw string) (*Sort, error) {
-	sortMap, err := helpers.Unmarshal[SortMap](raw)
+	sortMap, err := utils.Unmarshal[SortMap](raw)
 	if err != nil {
 		return nil, err
 	}

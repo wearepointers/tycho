@@ -5,7 +5,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/expanse-agency/tycho/utils/helpers"
+	"github.com/expanse-agency/tycho/utils"
 )
 
 type Operator string
@@ -95,7 +95,7 @@ type FilterFieldValue struct {
 }
 
 func ParseFilter(raw string) (*Filter, error) {
-	filterMap, err := helpers.Unmarshal[FilterMap](raw)
+	filterMap, err := utils.Unmarshal[FilterMap](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func parseFilterMap(filterMap *FilterMap) *Filter {
 		s := string(value)
 		if Operator(key).IsOr() {
 			// do something
-			filterMap, err := helpers.Unmarshal[FilterMap](s)
+			filterMap, err := utils.Unmarshal[FilterMap](s)
 			if err != nil {
 				continue
 			}
@@ -123,7 +123,7 @@ func parseFilterMap(filterMap *FilterMap) *Filter {
 			continue
 		}
 
-		field, err := helpers.Unmarshal[FilterMapField](s)
+		field, err := utils.Unmarshal[FilterMapField](s)
 		if err != nil {
 			continue
 		}

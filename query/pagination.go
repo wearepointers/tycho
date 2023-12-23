@@ -1,6 +1,6 @@
 package query
 
-import "github.com/expanse-agency/tycho/utils/helpers"
+import "github.com/expanse-agency/tycho/utils"
 
 type Pagination struct {
 	Page  int
@@ -8,7 +8,7 @@ type Pagination struct {
 }
 
 func ParsePagination(raw string, maxLimit int) *Pagination {
-	pagination, err := helpers.Unmarshal[Pagination](raw)
+	pagination, err := utils.Unmarshal[Pagination](raw)
 	if err != nil {
 		return &Pagination{
 			Page:  0,

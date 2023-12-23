@@ -3,14 +3,14 @@ package query
 import (
 	"errors"
 
-	"github.com/expanse-agency/tycho/utils/helpers"
+	"github.com/expanse-agency/tycho/utils"
 )
 
 // ["relation", "otherrelation"]
 type Relation []string
 
 func ParseRelation(raw string) (*Relation, error) {
-	relation, err := helpers.Unmarshal[Relation](raw)
+	relation, err := utils.Unmarshal[Relation](raw)
 	if err != nil {
 		return nil, err
 	}

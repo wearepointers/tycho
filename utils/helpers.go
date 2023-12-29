@@ -1,6 +1,9 @@
 package utils
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 func Unmarshal[T any](s string) (*T, error) {
 	out := new(T)
@@ -9,4 +12,8 @@ func Unmarshal[T any](s string) (*T, error) {
 	}
 
 	return out, nil
+}
+
+func IsSlice(v any) bool {
+	return reflect.TypeOf(v).Kind() == reflect.Slice
 }

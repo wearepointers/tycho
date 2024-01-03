@@ -1,6 +1,6 @@
 # Tycho - Query filtering, sorting, and pagination for Go APIs
 
-Tycho is a library for filtering, sorting, and paginating queries in Go APIs. You can use it standalone with our own SQL builder or use the mods for [sqlboiler](https://github.com/volatiletech/sqlboiler). You can implement however you like.
+Tycho is a library for filtering, sorting, and paginating queries in Go APIs. You can use it standalone with our own SQL builder or use the query mods for [sqlboiler](https://github.com/volatiletech/sqlboiler). You can implement however you like.
 
 
 

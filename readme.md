@@ -119,6 +119,11 @@ https://domain.com/endpoint?relation=["table", "table2"]
 https://domain.com/endpoint/:param
 ```
 
+## Search
+
+```
+https://domain.com/endpoint?search=term
+```
 
 ## License
 

@@ -1,32 +1,13 @@
 package query
 
 import (
-	"errors"
-
+	"github.com/expanse-agency/tycho/sql"
 	"github.com/expanse-agency/tycho/utils"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
-
-type Order string
-
-var (
-	ASC  Order = "asc"
-	DESC Order = "desc"
-)
-
-var ordering = map[Order]bool{
-	ASC:  true,
-	DESC: true,
-}
-
-func (o Order) IsValid() bool {
-	return !ordering[o]
-}
-
-// { "name": "asc", "otherfield": "desc"}
-type SortMap map[string]Order
 
 type Sort struct {
-	Fields []*SortField
+	fields []*SortField
 }
 
 type SortField struct {
@@ -34,20 +15,27 @@ type SortField struct {
 	Order Order
 }
 
-func ParseSort(raw string) (*Sort, error) {
-	sortMap, err := utils.Unmarshal[SortMap](raw)
-	if err != nil {
-		return nil, err
-	}
-
-	if sortMap == nil {
-		return nil, errors.New("sort map is nil")
-	}
-
-	return parseSortMap(sortMap), nil
+func (s *Sort) Apply(q *Query) {
+	q.setSort(s)
 }
 
-func parseSortMap(sortMap *SortMap) *Sort {
+// { "name": "asc", "otherfield": "desc"}
+type SortMap map[string]Order
+
+func ParseSort(raw string) *Sort {
+	sortMap, err := utils.Unmarshal[SortMap](raw)
+	if err != nil {
+		return nil
+	}
+
+	return sortMap.parse()
+}
+
+func (sortMap *SortMap) parse() *Sort {
+	if sortMap == nil {
+		return nil
+	}
+
 	var fields []*SortField
 	for key, order := range *sortMap {
 		if !order.IsValid() {
@@ -61,6 +49,47 @@ func parseSortMap(sortMap *SortMap) *Sort {
 	}
 
 	return &Sort{
-		Fields: fields,
+		fields: fields,
 	}
+}
+
+func (s *Sort) SQL(tn string) string {
+	if len(s.fields) <= 0 {
+		return ""
+	}
+
+	var orderDesc []string
+	var orderAsc []string
+
+	for _, f := range s.fields {
+		if f.Order == desc {
+			orderDesc = append(orderDesc, sql.Column(tn, f.Field))
+		}
+
+		if f.Order == asc {
+			orderAsc = append(orderAsc, sql.Column(tn, f.Field))
+		}
+	}
+
+	return sql.OrderBy(orderDesc, orderAsc)
+}
+
+func (s *Sort) Mods(tn string) []qm.QueryMod {
+	if len(s.fields) <= 0 {
+		return nil
+	}
+
+	var mods []qm.QueryMod
+
+	for _, f := range s.fields {
+		if f.Order == desc {
+			mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Field), sql.DESC.String())))
+		}
+
+		if f.Order == asc {
+			mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Field), sql.ASC.String())))
+		}
+	}
+
+	return mods
 }

@@ -1,23 +1,36 @@
 package query
 
 import (
-	"errors"
-
 	"github.com/expanse-agency/tycho/utils"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 // ["relation", "otherrelation"]
 type Relation []string
 
-func ParseRelation(raw string) (*Relation, error) {
+func (r *Relation) Apply(q *Query) {
+	q.setRelation(r)
+}
+
+func ParseRelation(raw string) *Relation {
 	relation, err := utils.Unmarshal[Relation](raw)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
-	if relation == nil {
-		return nil, errors.New("relation is nil")
+	return relation
+}
+
+func (r *Relation) Mods() []qm.QueryMod {
+	if r == nil {
+		return nil
 	}
 
-	return relation, nil
+	var mods []qm.QueryMod
+
+	for _, relation := range *r {
+		mods = append(mods, qm.Load(utils.SnakeToPascal(relation)))
+	}
+
+	return mods
 }

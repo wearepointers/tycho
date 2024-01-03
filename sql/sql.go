@@ -3,10 +3,16 @@ package sql
 import (
 	"fmt"
 	"strings"
+
+	"github.com/expanse-agency/tycho/utils"
 )
 
+func Query(c ...string) string {
+	return strings.Join(c, " ")
+}
+
 func Clause(op LogicalOperator, mods ...string) string {
-	return strings.Join(mods, op.String())
+	return strings.Join(mods, op.String(true))
 }
 
 func Expr(s string) string {
@@ -21,4 +27,12 @@ func Args(sql, prefix string) string {
 	}
 
 	return sql
+}
+
+func Column(c ...string) string {
+	return utils.Join(c, ".", `"`, `"`)
+}
+
+func Group(s ...string) string {
+	return strings.Join(s, ",")
 }

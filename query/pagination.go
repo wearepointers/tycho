@@ -8,24 +8,34 @@ import (
 )
 
 type Pagination struct {
-	Page  int
-	Limit int
+	Page        int
+	Limit       int
+	limitOffset bool `json:"-"`
 }
 
-func (p *Pagination) Offset() int {
+func (p *Pagination) offset() int {
 	return p.Page * p.Limit
+}
+
+func (p *Pagination) LimitWithOffset() int {
+	if p.limitOffset {
+		return p.Limit + 1
+	}
+
+	return p.Limit
 }
 
 func (p *Pagination) Apply(q *Query) {
 	q.setPagination(p)
 }
 
-func ParsePagination(raw string, maxLimit int) *Pagination {
+func ParsePagination(raw string, maxLimit int, limitOffset bool) *Pagination {
 	pagination, err := utils.Unmarshal[Pagination](raw)
 	if err != nil {
 		return &Pagination{
-			Page:  0,
-			Limit: maxLimit,
+			Page:        0,
+			Limit:       maxLimit,
+			limitOffset: limitOffset,
 		}
 	}
 
@@ -41,18 +51,18 @@ func ParsePagination(raw string, maxLimit int) *Pagination {
 }
 
 func (p *Pagination) SQL() string {
-	offset := p.Offset()
+	offset := p.offset()
 
 	if offset == 0 {
-		return fmt.Sprintf("LIMIT %d", p.Limit)
+		return fmt.Sprintf("LIMIT %d", p.LimitWithOffset())
 	}
 
-	return fmt.Sprintf("LIMIT %d OFFSET %d", p.Limit, offset)
+	return fmt.Sprintf("LIMIT %d OFFSET %d", p.LimitWithOffset(), offset)
 }
 
 func (p *Pagination) Mods() []qm.QueryMod {
 	return []qm.QueryMod{
-		qm.Limit(p.Limit),
-		qm.Offset(p.Offset()),
+		qm.Limit(p.LimitWithOffset()),
+		qm.Offset(p.offset()),
 	}
 }

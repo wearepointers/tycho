@@ -5,19 +5,28 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
-type Query struct {
-	dialect    *Dialect
-	Filter     *Filter
-	Sort       *Sort
-	Pagination *Pagination
-	Relation   *Relation
-	Param      *Param
-	Search     *Search
+type TableColumns map[string]bool
+
+func (c TableColumns) Has(column string) bool {
+	return c[column]
 }
 
-func NewQuery(d Driver, mods ...QueryMod) *Query {
+type Query struct {
+	dialect                 *Dialect
+	filterAllowedOnColumns  TableColumns
+	sortingAllowedOnColumns TableColumns
+	Filter                  *Filter
+	Sort                    *Sort
+	Pagination              *Pagination
+	Relation                *Relation
+	Param                   *Param
+	Search                  *Search
+}
+
+func NewQuery(d Driver, fc, sc TableColumns, mods ...QueryMod) *Query {
 	q := &Query{}
 	q.setDialect(d.Dialect())
+	q.setColumns(fc, sc)
 	q.applyMods(mods...)
 
 	return q
@@ -27,6 +36,11 @@ func (q *Query) applyMods(mods ...QueryMod) {
 	for _, mod := range mods {
 		mod.Apply(q)
 	}
+}
+
+func (q *Query) setColumns(fc, sc TableColumns) {
+	q.filterAllowedOnColumns = fc
+	q.sortingAllowedOnColumns = sc
 }
 
 func (q *Query) setDialect(d *Dialect) {
@@ -110,19 +124,11 @@ func (q *Query) SQL(tn string) (string, []any) {
 
 }
 
-func (q *Query) Mods(tn string) []qm.QueryMod {
+func (q *Query) BareMods(tn string) []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	if q.Filter != nil {
 		mods = append(mods, q.Filter.Mods(tn)...)
-	}
-
-	if q.Sort != nil {
-		mods = append(mods, q.Sort.Mods(tn)...)
-	}
-
-	if q.Pagination != nil {
-		mods = append(mods, q.Pagination.Mods()...)
 	}
 
 	if q.Relation != nil {
@@ -131,6 +137,20 @@ func (q *Query) Mods(tn string) []qm.QueryMod {
 
 	if q.Param != nil {
 		mods = append(mods, q.Param.Mods(tn))
+	}
+
+	return mods
+}
+
+func (q *Query) Mods(tn string) []qm.QueryMod {
+	mods := q.BareMods(tn)
+
+	if q.Sort != nil {
+		mods = append(mods, q.Sort.Mods(tn)...)
+	}
+
+	if q.Pagination != nil {
+		mods = append(mods, q.Pagination.Mods()...)
 	}
 
 	if q.Search != nil {

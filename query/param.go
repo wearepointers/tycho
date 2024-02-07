@@ -7,7 +7,7 @@ import (
 
 type Param struct {
 	column string
-	value  any
+	Value  any
 }
 
 func (p *Param) Apply(q *Query) {
@@ -19,9 +19,9 @@ func ParseParam(column string, value any) *Param {
 }
 
 func (p *Param) SQL(tn string) (string, any) {
-	return sql.Where(sql.Column(tn, p.column), sql.Equal, "?"), p.value
+	return sql.Where(sql.Column(tn, p.column), sql.Equal, "?"), p.Value
 }
 
 func (p *Param) Mods(tn string) qm.QueryMod {
-	return qm.Where(sql.Where(sql.Column(tn, p.column), sql.Equal, "?"), p.value)
+	return qm.Where(sql.Where(sql.Column(tn, p.column), sql.Equal, "?"), p.Value)
 }

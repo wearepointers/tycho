@@ -9,8 +9,9 @@ import (
 )
 
 type Filter struct {
-	columns []*FilterColumn
-	or      *Filter
+	tableColumns TableColumns
+	columns      []*FilterColumn
+	or           *Filter
 }
 
 type FilterColumn struct {
@@ -25,6 +26,11 @@ type FilterColumnWhere struct {
 }
 
 func (f *Filter) Apply(q *Query) {
+	if f == nil {
+		return
+	}
+
+	f.tableColumns = q.filterAllowedOnColumns
 	q.setFilter(f)
 }
 
@@ -121,6 +127,10 @@ func (f *Filter) sql(tn string) (string, []any) {
 	var args []any
 
 	for _, c := range f.columns {
+		if !f.tableColumns.Has(c.Column) {
+			continue
+		}
+
 		s1, args1 := c.sql(tn)
 		if s1 == "" {
 			continue
@@ -150,6 +160,10 @@ func (f *Filter) mods(tn string) []qm.QueryMod {
 	var andMods []qm.QueryMod
 
 	for _, c := range f.columns {
+		if !f.tableColumns.Has(c.Column) {
+			continue
+		}
+
 		cMods := c.mods(tn)
 		if cMods == nil {
 			continue

@@ -17,14 +17,14 @@ func (s *Search) Apply(q *Query) {
 }
 
 func ParseSearch(value string, columns []string) *Search {
+	if len(columns) <= 0 || value == "" {
+		return nil
+	}
+
 	return &Search{value, columns}
 }
 
 func (s *Search) SQL(tn string) (string, any) {
-	if s.value == "" || len(s.columns) == 0 {
-		return "", nil
-	}
-
 	var q []string
 	var args []any
 
@@ -36,10 +36,6 @@ func (s *Search) SQL(tn string) (string, any) {
 }
 
 func (s *Search) Mods(tn string) qm.QueryMod {
-	if s.value == "" || len(s.columns) == 0 {
-		return nil
-	}
-
 	var mods []qm.QueryMod
 	for i, column := range s.columns {
 		if i > 0 {

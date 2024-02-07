@@ -7,7 +7,8 @@ import (
 )
 
 type Sort struct {
-	fields []*SortField
+	tableColumns TableColumns
+	fields       []*SortField
 }
 
 type SortField struct {
@@ -16,6 +17,11 @@ type SortField struct {
 }
 
 func (s *Sort) Apply(q *Query) {
+	if s == nil {
+		return
+	}
+
+	s.tableColumns = q.sortingAllowedOnColumns
 	q.setSort(s)
 }
 
@@ -62,6 +68,10 @@ func (s *Sort) SQL(tn string) string {
 	var orderAsc []string
 
 	for _, f := range s.fields {
+		if !s.tableColumns.Has(f.Field) {
+			continue
+		}
+
 		if f.Order == desc {
 			orderDesc = append(orderDesc, sql.Column(tn, f.Field))
 		}
@@ -82,6 +92,10 @@ func (s *Sort) Mods(tn string) []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	for _, f := range s.fields {
+		if !s.tableColumns.Has(f.Field) {
+			continue
+		}
+
 		if f.Order == desc {
 			mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Field), sql.DESC.String())))
 		}

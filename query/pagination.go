@@ -29,12 +29,8 @@ func ParsePagination(raw string, maxLimit int) *Pagination {
 		}
 	}
 
-	if pagination.Limit > maxLimit {
+	if pagination.Limit > maxLimit || pagination.Limit <= 0 {
 		pagination.Limit = maxLimit
-	}
-
-	if pagination.Limit <= 0 {
-		pagination.Limit = 1
 	}
 
 	if pagination.Page < 0 {

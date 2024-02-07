@@ -47,6 +47,7 @@ func ParsePagination(raw string, maxLimit int, limitOffset bool) *Pagination {
 		pagination.Page = 0
 	}
 
+	pagination.limitOffset = limitOffset
 	return pagination
 }
 

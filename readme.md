@@ -2,7 +2,11 @@
 
 Tycho is a library for filtering, sorting, and paginating queries in Go APIs. You can use it standalone with our own SQL builder or use the query mods for [sqlboiler](https://github.com/volatiletech/sqlboiler).
 
-
+## TODO
+- [ ] Update README for cursor/offset pagination
+- [ ] Own time format for cursor parsing values
+- [ ] More values for cursor like int, float, bool, etc.
+- [ ] Include columns in cursor (col:value)
 
 ## Installation
 

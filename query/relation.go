@@ -2,6 +2,7 @@ package query
 
 import (
 	"github.com/expanse-agency/tycho/utils"
+	"github.com/volatiletech/sqlboiler/strmangle"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -29,7 +30,7 @@ func (r *Relation) Mods() []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	for _, relation := range *r {
-		mods = append(mods, qm.Load(utils.SnakeToPascal(relation), qm.Limit(10)))
+		mods = append(mods, qm.Load(strmangle.TitleCase(relation), qm.Limit(10)))
 	}
 
 	return mods

@@ -1,11 +1,11 @@
 package utils
 
-import "reflect"
-
-func IsSlice(v any) bool {
-	return reflect.TypeOf(v).Kind() == reflect.Slice
+func IsSlice[T any](v any) (bool, []T) {
+	val, ok := v.([]T)
+	return ok, val
 }
 
-func IsBool(v any) bool {
-	return reflect.TypeOf(v).Kind() == reflect.Bool
+func IsBool(v interface{}) (bool, bool) {
+	val, ok := v.(bool)
+	return ok, val
 }

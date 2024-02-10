@@ -128,15 +128,20 @@ func (o Operator) mod(c string, v any) qm.QueryMod {
 	case lessThanOrEqual:
 		return qm.Where(sql.Where(c, sql.LessThanOrEqual, "?"), v)
 	case in:
-		if !utils.IsSlice(v) {
+		// TODO: check if this slice thing still works with ints/strings etc
+		isSlice, val := utils.IsSlice[any](v)
+		if !isSlice {
 			return nil
 		}
-		return qm.WhereIn(sql.Query(c, sql.In.String(), "?"), v.([]any)...)
+
+		return qm.WhereIn(sql.Query(c, sql.In.String(), "?"), val...)
 	case notIn:
-		if !utils.IsSlice(v) {
+		isSlice, val := utils.IsSlice[any](v)
+		if !isSlice {
 			return nil
 		}
-		return qm.WhereIn(sql.Query(c, sql.NotIn.String(), "?"), v.([]any)...)
+
+		return qm.WhereIn(sql.Query(c, sql.NotIn.String(), "?"), val...)
 	case contains:
 		return qm.Where(sql.Where(c, sql.Like, "?"), fmt.Sprint("%", v, "%"))
 	case notContains:
@@ -146,36 +151,16 @@ func (o Operator) mod(c string, v any) qm.QueryMod {
 	case endsWith:
 		return qm.Where(sql.Where(c, sql.Like, "?"), fmt.Sprint("%", v))
 	case null:
-		if !utils.IsBool(v) {
+		isBool, val := utils.IsBool(v)
+		if !isBool {
 			return nil
 		}
 
-		b := v.(bool)
-		if b {
+		if val {
 			return qm.Where(sql.Where(c, sql.IsNull))
 		}
 		return qm.Where(sql.Where(c, sql.IsNotNull))
 	default:
 		return nil
 	}
-}
-
-type Order string
-
-var (
-	asc  Order = "asc"
-	desc Order = "desc"
-)
-
-var ordering = map[Order]bool{
-	asc:  true,
-	desc: true,
-}
-
-func (o Order) IsValid() bool {
-	return ordering[o]
-}
-
-func (o Order) String() string {
-	return string(o)
 }

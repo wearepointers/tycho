@@ -4,11 +4,11 @@ type Dialect struct {
 	UseIndexPlaceholders bool
 }
 
-type Driver string
+type Driver int
 
-var (
-	MySQL    Driver = "mysql"
-	Postgres Driver = "postgres"
+const (
+	MySQL Driver = iota
+	Postgres
 )
 
 func (d Driver) Dialect() *Dialect {

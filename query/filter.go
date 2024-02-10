@@ -9,9 +9,9 @@ import (
 )
 
 type Filter struct {
-	tableColumns TableColumns
-	columns      []*FilterColumn
-	or           *Filter
+	filterAllowedOnColumns TableColumns
+	columns                []*FilterColumn
+	or                     *Filter
 }
 
 type FilterColumn struct {
@@ -30,7 +30,6 @@ func (f *Filter) Apply(q *Query) {
 		return
 	}
 
-	f.tableColumns = q.filterAllowedOnColumns
 	q.setFilter(f)
 }
 
@@ -38,16 +37,16 @@ func (f *Filter) Apply(q *Query) {
 type FilterMap map[string]json.RawMessage
 type FilterMapColumn map[Operator]json.RawMessage
 
-func ParseFilter(raw string) *Filter {
+func ParseFilter(raw string, allowedColumns TableColumns) *Filter {
 	filterMap, err := utils.Unmarshal[FilterMap](raw)
 	if err != nil {
 		return nil
 	}
 
-	return filterMap.parse()
+	return filterMap.parse(allowedColumns)
 }
 
-func (filterMap *FilterMap) parse() *Filter {
+func (filterMap *FilterMap) parse(allowedColumns TableColumns) *Filter {
 	if filterMap == nil {
 		return nil
 	}
@@ -55,6 +54,10 @@ func (filterMap *FilterMap) parse() *Filter {
 	var columns []*FilterColumn
 	var or *Filter
 	for key, value := range *filterMap {
+		if !allowedColumns.Has(key) && !Operator(key).IsOr() {
+			continue
+		}
+
 		s := string(value)
 		if Operator(key).IsOr() {
 			filterMap, err := utils.Unmarshal[FilterMap](s)
@@ -62,7 +65,7 @@ func (filterMap *FilterMap) parse() *Filter {
 				continue
 			}
 
-			or = filterMap.parse()
+			or = filterMap.parse(allowedColumns)
 			continue
 		}
 
@@ -75,8 +78,9 @@ func (filterMap *FilterMap) parse() *Filter {
 	}
 
 	return &Filter{
-		columns: columns,
-		or:      or,
+		filterAllowedOnColumns: allowedColumns,
+		columns:                columns,
+		or:                     or,
 	}
 }
 
@@ -127,10 +131,6 @@ func (f *Filter) sql(tn string) (string, []any) {
 	var args []any
 
 	for _, c := range f.columns {
-		if !f.tableColumns.Has(c.Column) {
-			continue
-		}
-
 		s1, args1 := c.sql(tn)
 		if s1 == "" {
 			continue
@@ -160,10 +160,6 @@ func (f *Filter) mods(tn string) []qm.QueryMod {
 	var andMods []qm.QueryMod
 
 	for _, c := range f.columns {
-		if !f.tableColumns.Has(c.Column) {
-			continue
-		}
-
 		cMods := c.mods(tn)
 		if cMods == nil {
 			continue
@@ -197,8 +193,10 @@ func (f *FilterColumn) sql(tn string) (string, []any) {
 			s = append(s, s1)
 
 			if args1 != nil {
-				if utils.IsSlice(args1) {
-					args = append(args, args1.([]any)...)
+				// TODO: check if isSlice works with any
+				isSlice, val := utils.IsSlice[any](args1)
+				if isSlice {
+					args = append(args, val...)
 					continue
 				}
 

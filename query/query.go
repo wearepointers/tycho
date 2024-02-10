@@ -12,21 +12,19 @@ func (c TableColumns) Has(column string) bool {
 }
 
 type Query struct {
-	dialect                 *Dialect
-	filterAllowedOnColumns  TableColumns
-	sortingAllowedOnColumns TableColumns
-	Filter                  *Filter
-	Sort                    *Sort
-	Pagination              *Pagination
-	Relation                *Relation
-	Param                   *Param
-	Search                  *Search
+	dialect          *Dialect
+	Filter           *Filter
+	Sort             *Sort
+	OffsetPagination *OffsetPagination
+	CursorPagination *CursorPagination
+	Relation         *Relation
+	Param            *Param
+	Search           *Search
 }
 
-func NewQuery(d Driver, fc, sc TableColumns, mods ...QueryMod) *Query {
+func NewQuery(d Driver, mods ...QueryMod) *Query {
 	q := &Query{}
 	q.setDialect(d.Dialect())
-	q.setColumns(fc, sc)
 	q.applyMods(mods...)
 
 	return q
@@ -38,11 +36,6 @@ func (q *Query) applyMods(mods ...QueryMod) {
 	}
 }
 
-func (q *Query) setColumns(fc, sc TableColumns) {
-	q.filterAllowedOnColumns = fc
-	q.sortingAllowedOnColumns = sc
-}
-
 func (q *Query) setDialect(d *Dialect) {
 	q.dialect = d
 }
@@ -51,8 +44,12 @@ func (q *Query) setFilter(f *Filter) {
 	q.Filter = f
 }
 
-func (q *Query) setPagination(p *Pagination) {
-	q.Pagination = p
+func (q *Query) setOffsetPagination(cp *OffsetPagination) {
+	q.OffsetPagination = cp
+}
+
+func (q *Query) setCursorPagination(cp *CursorPagination) {
+	q.CursorPagination = cp
 }
 
 func (q *Query) setSort(s *Sort) {
@@ -104,15 +101,19 @@ func (q *Query) SQL(tn string) (string, []any) {
 		args = append(args, sa)
 	}
 
-	if q.Sort != nil {
-		s = append(s, "ORDER BY")
+	// Disable sorting here, we do that in cursor pagination if set
+	if !q.Sort.isEmpty() && q.CursorPagination == nil {
 		ss := q.Sort.SQL(tn)
 
 		s = append(s, ss)
 	}
 
-	if q.Pagination != nil {
-		s = append(s, q.Pagination.SQL())
+	if q.OffsetPagination != nil {
+		s = append(s, q.OffsetPagination.SQL())
+	}
+
+	if q.CursorPagination != nil && q.OffsetPagination == nil {
+		s = append(s, q.CursorPagination.SQL())
 	}
 
 	if len(s) <= 0 {
@@ -145,12 +146,17 @@ func (q *Query) BareMods(tn string) []qm.QueryMod {
 func (q *Query) Mods(tn string) []qm.QueryMod {
 	mods := q.BareMods(tn)
 
-	if q.Sort != nil {
+	// Disable sorting here, we do that in cursor pagination if set
+	if !q.Sort.isEmpty() && q.CursorPagination == nil {
 		mods = append(mods, q.Sort.Mods(tn)...)
 	}
 
-	if q.Pagination != nil {
-		mods = append(mods, q.Pagination.Mods()...)
+	if q.OffsetPagination != nil {
+		mods = append(mods, q.OffsetPagination.Mods()...)
+	}
+
+	if q.CursorPagination != nil && q.OffsetPagination == nil {
+		mods = append(mods, q.CursorPagination.Mods(tn)...)
 	}
 
 	if q.Search != nil {

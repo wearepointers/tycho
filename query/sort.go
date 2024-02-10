@@ -7,13 +7,16 @@ import (
 )
 
 type Sort struct {
-	tableColumns TableColumns
-	fields       []*SortField
+	filterAllowedOnColumns TableColumns
+	columnsInMap           map[string]int
+	columns                SortColumnSlice
+	defaultOrderBy         sql.Order
 }
 
-type SortField struct {
-	Field string
-	Order Order
+type SortColumnSlice []SortColumn
+type SortColumn struct {
+	Column string
+	Order  sql.Order
 }
 
 func (s *Sort) Apply(q *Query) {
@@ -21,88 +24,101 @@ func (s *Sort) Apply(q *Query) {
 		return
 	}
 
-	s.tableColumns = q.sortingAllowedOnColumns
 	q.setSort(s)
 }
 
-// { "name": "asc", "otherfield": "desc"}
-type SortMap map[string]Order
+// [{"colunn":"name", "order":"ASC"}]
 
-func ParseSort(raw string) *Sort {
-	sortMap, err := utils.Unmarshal[SortMap](raw)
-	if err != nil {
-		return nil
-	}
-
-	return sortMap.parse()
+func ParseSort(raw string, allowedColumns TableColumns) *Sort {
+	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
+	return sortColumnSlice.parse(allowedColumns)
 }
 
-func (sortMap *SortMap) parse() *Sort {
-	if sortMap == nil {
-		return nil
+func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort {
+	var defaultOrderBy = sql.ASC
+
+	if sortColumnSlice == nil {
+		return &Sort{filterAllowedOnColumns: allowedColumns, defaultOrderBy: defaultOrderBy}
 	}
 
-	var fields []*SortField
-	for key, order := range *sortMap {
-		if !order.IsValid() {
+	var columns []SortColumn
+	var columnsInMap = make(map[string]int)
+
+	var i int
+	for _, sortColumn := range *sortColumnSlice {
+		if !sortColumn.Order.IsValid() || !allowedColumns.Has(sortColumn.Column) {
 			continue
 		}
 
-		fields = append(fields, &SortField{
-			Field: key,
-			Order: order,
-		})
+		// Duplicate catch
+		if _, ok := columnsInMap[sortColumn.Column]; ok {
+			continue
+		}
+
+		columns = append(columns, sortColumn)
+		columnsInMap[sortColumn.Column] = i
+		i++
+	}
+
+	if len(columns) > 0 {
+		defaultOrderBy = columns[0].Order
 	}
 
 	return &Sort{
-		fields: fields,
+		filterAllowedOnColumns: allowedColumns,
+		columns:                columns,
+		columnsInMap:           columnsInMap,
+		defaultOrderBy:         defaultOrderBy,
+	}
+}
+
+func (s *Sort) isEmpty() bool {
+	return s != nil && len(s.columns) <= 0
+}
+
+func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
+	columns := f(s.defaultOrderBy)
+
+	if s.isEmpty() {
+		s.columns = columns
+		return
+	}
+
+	// This overwrites any sort
+	for _, column := range columns {
+		index, ok := s.columnsInMap[column.Column]
+		if !ok {
+			s.columns = append(s.columns, column)
+			continue
+		}
+
+		s.columns = append(s.columns[:index], s.columns[index+1:]...) // Remove
+		s.columns = append(s.columns, column)                         // Add to end
+		s.columnsInMap[column.Column] = len(s.columns) - 1            // Update index
 	}
 }
 
 func (s *Sort) SQL(tn string) string {
-	if len(s.fields) <= 0 {
+	if len(s.columns) <= 0 {
 		return ""
 	}
 
-	var orderDesc []string
-	var orderAsc []string
-
-	for _, f := range s.fields {
-		if !s.tableColumns.Has(f.Field) {
-			continue
-		}
-
-		if f.Order == desc {
-			orderDesc = append(orderDesc, sql.Column(tn, f.Field))
-		}
-
-		if f.Order == asc {
-			orderAsc = append(orderAsc, sql.Column(tn, f.Field))
-		}
+	var orders []string
+	for _, f := range s.columns {
+		orders = append(orders, sql.Column(tn, f.Column), f.Order.String())
 	}
 
-	return sql.OrderBy(orderDesc, orderAsc)
+	return sql.Group(orders...)
 }
 
 func (s *Sort) Mods(tn string) []qm.QueryMod {
-	if len(s.fields) <= 0 {
+	if len(s.columns) <= 0 {
 		return nil
 	}
 
 	var mods []qm.QueryMod
-
-	for _, f := range s.fields {
-		if !s.tableColumns.Has(f.Field) {
-			continue
-		}
-
-		if f.Order == desc {
-			mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Field), sql.DESC.String())))
-		}
-
-		if f.Order == asc {
-			mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Field), sql.ASC.String())))
-		}
+	for _, f := range s.columns {
+		mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Column), f.Order.String())))
 	}
 
 	return mods

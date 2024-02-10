@@ -48,3 +48,12 @@ var (
 func (o Order) String() string {
 	return string(o)
 }
+
+var ordering = map[Order]bool{
+	ASC:  true,
+	DESC: true,
+}
+
+func (o Order) IsValid() bool {
+	return ordering[o]
+}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"unicode"
 )
 
 func Unmarshal[T any](s string) (*T, error) {
@@ -36,22 +35,4 @@ func Join(elems []string, sep string, prefix string, suffix string) string {
 		b.WriteString(fmt.Sprint(prefix, s, suffix))
 	}
 	return b.String()
-}
-
-func SnakeToPascal(s string) string {
-	var result []rune
-
-	for i, r := range s {
-		if i == 0 {
-			result = append(result, unicode.ToUpper(r))
-		} else if r == '_' {
-			continue
-		} else if i > 0 && s[i-1] == '_' {
-			result = append(result, unicode.ToUpper(r))
-		} else {
-			result = append(result, r)
-		}
-	}
-
-	return string(result)
 }

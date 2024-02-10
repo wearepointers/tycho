@@ -6,6 +6,17 @@ import (
 	"strings"
 )
 
+func WhereComposite[T any](op Operator, cols []T, f func(c T) string) string {
+	var arguments = make([]string, len(cols))
+	var columns = make([]string, len(cols))
+	for i, c := range cols {
+		arguments[i] = "?"
+		columns[i] = f(c)
+	}
+
+	return Query([]string{Expr(Group(columns...)), op.String(), Expr(Group(arguments...))}...)
+}
+
 func Where(s string, op Operator, v ...string) string {
 	j := []string{s, op.String()}
 	if len(v) > 0 {

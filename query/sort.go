@@ -1,8 +1,8 @@
 package query
 
 import (
-	"github.com/expanse-agency/tycho/sql"
-	"github.com/expanse-agency/tycho/utils"
+	"github.com/wearepointers/tycho/sql"
+	"github.com/wearepointers/tycho/utils"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 

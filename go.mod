@@ -1,4 +1,4 @@
-module github.com/expanse-agency/tycho
+module github.com/wearepointers/tycho
 
 go 1.18
 

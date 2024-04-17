@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/expanse-agency/tycho/utils"
+	"github.com/wearepointers/tycho/utils"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 

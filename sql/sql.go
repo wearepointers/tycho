@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/expanse-agency/tycho/utils"
+	"github.com/wearepointers/tycho/utils"
 )
 
 func Query(c ...string) string {

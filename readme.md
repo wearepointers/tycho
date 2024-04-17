@@ -11,7 +11,7 @@ Tycho is a library for filtering, sorting, and paginating queries in Go APIs. Yo
 ## Installation
 
 ```bash
-go get github.com/expanse-agency/tycho
+go get github.com/wearepointers/tycho
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ package main
 import (
     "fmt"
 
-   "github.com/expanse-agency/tycho"
+   "github.com/wearepointers/tycho"
    "github.com/gin-gonic/gin"
 )
 
@@ -139,4 +139,4 @@ https://domain.com/endpoint?search=term
 
 ## License
 
-MIT © [Expanse Agency](./LICENSE) 2024
+MIT © [Pointers](./LICENSE) 2024

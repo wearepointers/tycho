@@ -128,7 +128,6 @@ func (o Operator) mod(c string, v any) qm.QueryMod {
 	case lessThanOrEqual:
 		return qm.Where(sql.Where(c, sql.LessThanOrEqual, "?"), v)
 	case in:
-		// TODO: check if this slice thing still works with ints/strings etc
 		isSlice, val := utils.IsSlice[any](v)
 		if !isSlice {
 			return nil

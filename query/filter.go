@@ -193,7 +193,6 @@ func (f *FilterColumn) sql(tn string) (string, []any) {
 			s = append(s, s1)
 
 			if args1 != nil {
-				// TODO: check if isSlice works with any
 				isSlice, val := utils.IsSlice[any](args1)
 				if isSlice {
 					args = append(args, val...)

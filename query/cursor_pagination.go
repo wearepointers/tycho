@@ -213,7 +213,6 @@ func PaginateCursorPagination[T any](p *CursorPagination, data []*T) ([]*T, *Pag
 	var prevPageCursor *Cursor
 	if hasPrevPage {
 		if p.cursor.IsBackward() {
-			// TODO check if this work siwth 0 data
 			dataCopied = dataCopied[1:]
 		}
 

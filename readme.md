@@ -3,7 +3,6 @@
 Tycho is a library for filtering, sorting, and paginating queries in Go APIs. You can use it standalone with our own SQL builder or use the query mods for [sqlboiler](https://github.com/volatiletech/sqlboiler).
 
 ## TODO
-- [ ] Update README for cursor/offset pagination
 - [ ] Own time format for cursor parsing values
 - [ ] More values for cursor like int, float, bool, etc.
 - [ ] Include columns in cursor (col:value)
@@ -22,34 +21,34 @@ package main
 import (
     "fmt"
 
-   "github.com/wearepointers/tycho"
+   "github.com/wearepointers/tycho/query"
    "github.com/gin-gonic/gin"
 )
 
 // To prevent filtering/sorting on columns that don't exist or shouldn't be filtered/sorted on
 var TablesWithColumnsMap = map[string]map[string]bool{
-	"link": {
+	"table_name": {
 		"id":   true,
 		"name": true,
 		"url":  true,
-		"tag":  true,
+		"tag":  false,
 		"domain": true,
 		// ...
 	},
 }
 
-var maxLimit = 100
-
 func (s *Service) get(c *gin.Context) {
 	// TablesWithColumnsMap can be nil if you want to allow filtering/sorting without checking
 	// Search columns can be none if you don't want to allow searching
-	selectQuery := query.ParseSelectQuery(c, TablesWithColumnsMap[dm.TableNames.Link], TablesWithColumnsMap[dm.TableNames.Link], "id", "name", "url")
-	tychoSQL, tychoArgs := selectQuery.SQL("link") // Get the SQL and args via Tycho
+	selectQuery := ParseListQuery(c, TablesWithColumnsMap[dm.TableNames.TableName], "id", "name", "url")
+	tychoSQL, tychoArgs := selectQuery.SQL(dm.TableNames.TableName) // Get the SQL and args via Tycho
 
-	sqlBoilerMods := append(selectQuery.Mods("link"), qm.From("link")) // Mods is for list, bareMods is for update, count, etc.
+	sqlBoilerMods := append(selectQuery.Mods(dm.TableNames.TableName), qm.From(dm.TableNames.TableName)) // Mods is for list, bareMods is for update, count, etc.
 	sqlBoilerSQL, sqlBoilerArgs := queries.BuildQuery(dm.NewQuery(sqlBoilerMods...)) // Get the SQL and args via SQLboiler
 
-	links, _ := dm.Links(selectQuery.Mods(dm.TableNames.Link)...).All(c, s.db) // Get the links via SQLboiler
+	links, _ := dm.Links(selectQuery.Mods(dm.TableNames.TableName)...).All(c, s.db) // Get the links via SQLboiler
+
+	paginatedRecords, pagination := query.PaginateCursorPagination(pm.Query.CursorPagination, links)
 
 	server.Return(c, gin.H{
 		"tychoSQL":      tychoSQL,
@@ -57,18 +56,26 @@ func (s *Service) get(c *gin.Context) {
 		"sqlBoilerSQL":  sqlBoilerSQL,
 		"sqlBoilerArgs": sqlBoilerArgs,
 		"links":         links,
+		"records":       paginatedRecords,
+		"pagination":    pagination,
 	})
 }
 
+const (
+	maxLimit = 50
+	driver   = query.Postgres
+)
+
 // For list queries, but used with bareMods for single result queries (like sum, count, etc.)
-func ParseQuery(c *gin.Context, fc query.TableColumns, sc query.TableColumns, searchColumns ...string) *query.Query {
-	filter := query.ParseFilter(c.Query("filter"))
-	sort := query.ParseSort(c.Query("sort"))
+func ParseListQuery(c *gin.Context, tc query.TableColumns, searchColumns ...string) *query.Query {
+	filter := query.ParseFilter(c.Query("filter"), tc)
+	sort := query.ParseSort(c.Query("sort"), tc)
 	relation := query.ParseRelation(c.Query("expand"))
 	search := query.ParseSearch(c.Query("search"), searchColumns)
 
-	pagination := query.ParsePagination(c.Query("pagination"), maxLimit)
-	return query.NewQuery(query.Postgres, fc, sc, filter, sort, pagination, relation, search)
+	// pagination := query.ParseOffsetPagination(c.Query("pagination"), maxLimit) // For offset pagination
+	pagination := query.ParseCursorPagination(c.Query("pagination"), sort, maxLimit, false)
+	return query.NewQuery(driver, filter, sort, pagination, relation, search)
 }
 
 // For single queries

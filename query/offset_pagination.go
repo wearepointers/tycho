@@ -32,9 +32,24 @@ func paginateOffsetPagination[T any](p *OffsetPagination, d []*T) ([]*T, *Pagina
 		cData = cData[:p.Limit]
 	}
 
+	hasNextPage := len > (p.Limit)
+	hasPrevPage := len > 0 && p.Page > 0
+	nextPageCursor := fmt.Sprint(p.Page + 1)
+	prevPageCursor := fmt.Sprint(p.Page - 1)
+
+	if !hasNextPage {
+		nextPageCursor = ""
+	}
+
+	if !hasPrevPage {
+		prevPageCursor = ""
+	}
+
 	return cData, &PaginationResponse{
-		HasNextPage: len > (p.Limit),
-		HasPrevPage: len > 0 && p.Page > 0,
+		HasNextPage:    hasNextPage,
+		NextPageCursor: nextPageCursor,
+		HasPrevPage:    hasPrevPage,
+		PrevPageCursor: prevPageCursor,
 	}
 }
 

@@ -159,7 +159,7 @@ func (p *CursorPagination) Limit() int {
 	return p.limit + 1
 }
 
-func ParseCursorPagination(raw string, sort *Sort, maxLimit int, hasAutoIncrementID bool) *CursorPagination {
+func parseCursorPagination(raw string, maxLimit int, hasAutoIncrementID bool, sort *Sort) *CursorPagination {
 	pagination := &CursorPagination{
 		sort:               sort,
 		limit:              maxLimit,
@@ -188,7 +188,7 @@ func ParseCursorPagination(raw string, sort *Sort, maxLimit int, hasAutoIncremen
 	return pagination
 }
 
-func PaginateCursorPagination[T any](p *CursorPagination, data []*T) ([]*T, *PaginationResponse) {
+func paginateCursorPagination[T any](p *CursorPagination, data []*T) ([]*T, *PaginationResponse) {
 	dataCopied := make([]*T, len(data))
 	copy(dataCopied, data)
 

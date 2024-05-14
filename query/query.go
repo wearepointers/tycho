@@ -13,6 +13,7 @@ func (c TableColumns) Has(column string) bool {
 
 type Query struct {
 	dialect          *Dialect
+	paginationType   PaginationType
 	Filter           *Filter
 	Sort             *Sort
 	OffsetPagination *OffsetPagination
@@ -22,9 +23,10 @@ type Query struct {
 	Search           *Search
 }
 
-func NewQuery(d Driver, mods ...QueryMod) *Query {
+func NewQuery(d Driver, pt PaginationType, hasAutoIncrementID bool, mods ...QueryMod) *Query {
 	q := &Query{}
-	q.setDialect(d.Dialect())
+	q.setDialect(d.Dialect(hasAutoIncrementID))
+	q.setPaginationType(pt)
 	q.applyMods(mods...)
 
 	return q
@@ -38,6 +40,10 @@ func (q *Query) applyMods(mods ...QueryMod) {
 
 func (q *Query) setDialect(d *Dialect) {
 	q.dialect = d
+}
+
+func (q *Query) setPaginationType(pt PaginationType) {
+	q.paginationType = pt
 }
 
 func (q *Query) setFilter(f *Filter) {

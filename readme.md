@@ -8,6 +8,7 @@ Tycho is a library for filtering, sorting, and paginating queries in Go APIs. Yo
 - [ ] Include columns in cursor (col:value)
 - [ ] Multiple params
 - [ ] Fix backward cursor pagination
+- [ ] Update pagination docs
 
 ## Installation
 
@@ -50,7 +51,7 @@ func (s *Service) get(c *gin.Context) {
 
 	links, _ := dm.Links(selectQuery.Mods(dm.TableNames.TableName)...).All(c, s.db) // Get the links via SQLboiler
 
-	paginatedRecords, pagination := query.PaginateCursorPagination(pm.Query.CursorPagination, links)
+	paginatedRecords, pagination := query.Paginate(paginationType, pm.Query, links)
 
 	server.Return(c, gin.H{
 		"tychoSQL":      tychoSQL,
@@ -66,6 +67,7 @@ func (s *Service) get(c *gin.Context) {
 const (
 	maxLimit = 50
 	driver   = query.Postgres
+	paginationType = query.CursorPaginationType
 )
 
 // For list queries, but used with bareMods for single result queries (like sum, count, etc.)
@@ -75,8 +77,7 @@ func ParseListQuery(c *gin.Context, tc query.TableColumns, searchColumns ...stri
 	relation := query.ParseRelation(c.Query("expand"))
 	search := query.ParseSearch(c.Query("search"), searchColumns)
 
-	// pagination := query.ParseOffsetPagination(c.Query("pagination"), maxLimit) // For offset pagination
-	pagination := query.ParseCursorPagination(c.Query("pagination"), sort, maxLimit, false)
+	pagination := query.ParsePagination(c.Query("pagination"), paginationType, maxLimit, false, sort)
 	return query.NewQuery(driver, filter, sort, pagination, relation, search)
 }
 

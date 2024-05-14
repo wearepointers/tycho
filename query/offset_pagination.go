@@ -24,7 +24,7 @@ func (p *OffsetPagination) limit() int {
 	return p.Limit + 1
 }
 
-func PaginateOffsetPagination[T any](p *OffsetPagination, d []*T) ([]*T, *PaginationResponse) {
+func paginateOffsetPagination[T any](p *OffsetPagination, d []*T) ([]*T, *PaginationResponse) {
 	var len = len(d)
 	var cData = d
 
@@ -38,7 +38,7 @@ func PaginateOffsetPagination[T any](p *OffsetPagination, d []*T) ([]*T, *Pagina
 	}
 }
 
-func ParseOffsetPagination(raw string, maxLimit int) *OffsetPagination {
+func parseOffsetPagination(raw string, maxLimit int) *OffsetPagination {
 	pagination, err := utils.Unmarshal[OffsetPagination](raw)
 	if err != nil {
 		return &OffsetPagination{

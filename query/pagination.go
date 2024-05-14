@@ -14,10 +14,18 @@ type PaginationResponse struct {
 	PrevPageCursor string `json:"prev_page_cursor,omitempty"`
 }
 
-func Paginate[T any](pt PaginationType, q *Query, d []*T) ([]*T, *PaginationResponse) {
-	if pt == OffsetPaginationType {
-		return PaginateOffsetPagination(q.OffsetPagination, d)
+func Paginate[T any](q *Query, d []*T) ([]*T, *PaginationResponse) {
+	if q.paginationType == OffsetPaginationType {
+		return paginateOffsetPagination(q.OffsetPagination, d)
 	}
 
-	return PaginateCursorPagination(q.CursorPagination, d)
+	return paginateCursorPagination(q.CursorPagination, d)
+}
+
+func ParsePagination(raw string, pt PaginationType, maxLimit int, hasAutoIncrementID bool, sort *Sort) QueryMod {
+	if pt == OffsetPaginationType {
+		return parseOffsetPagination(raw, maxLimit)
+	}
+
+	return parseCursorPagination(raw, maxLimit, hasAutoIncrementID, sort)
 }

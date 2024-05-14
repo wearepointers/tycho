@@ -1,8 +1,8 @@
 package query
 
 import (
-	"github.com/wearepointers/tycho/sql"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/wearepointers/tycho/sql"
 )
 
 type TableColumns map[string]bool

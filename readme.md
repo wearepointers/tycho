@@ -6,6 +6,8 @@ Tycho is a library for filtering, sorting, and paginating queries in Go APIs. Yo
 - [ ] Own time format for cursor parsing values
 - [ ] More values for cursor like int, float, bool, etc.
 - [ ] Include columns in cursor (col:value)
+- [ ] Multiple params
+- [ ] Fix backward cursor pagination
 
 ## Installation
 
@@ -117,13 +119,19 @@ null (is null): boolean
 ## Sorting
 
 ```
-https://domain.com/endpoint?sorting={"column": "asc", "column2": "desc"}
+https://domain.com/endpoint?sorting=[{"colunn":"name", "order":"ASC"}]
 ```
 
-## Pagination
+## Offset Pagination
 
 ```
 https://domain.com/endpoint?pagination={"page": 1, "limit": 10}
+```
+
+## Cursor Pagination (backward does not work!)
+
+```
+https://domain.com/endpoint?pagination={"cursor": "optional cursor", "limit": 10}
 ```
 
 ## Relation

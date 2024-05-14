@@ -3,8 +3,8 @@ package query
 import (
 	"fmt"
 
-	"github.com/wearepointers/tycho/utils"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/wearepointers/tycho/utils"
 )
 
 type OffsetPagination struct {
@@ -24,7 +24,7 @@ func (p *OffsetPagination) limit() int {
 	return p.Limit + 1
 }
 
-func PaginateOffsetPagination[T any](p *OffsetPagination, d []T) ([]T, *PaginationResponse) {
+func PaginateOffsetPagination[T any](p *OffsetPagination, d []*T) ([]*T, *PaginationResponse) {
 	var len = len(d)
 	var cData = d
 

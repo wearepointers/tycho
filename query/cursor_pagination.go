@@ -3,9 +3,9 @@ package query
 import (
 	"strings"
 
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
 	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 // TODO: include sort columns also in cursor, then they don't have to add sorting query anymore but can just use the next cursor to paginate in their sorted list?

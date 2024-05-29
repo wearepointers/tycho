@@ -3,12 +3,14 @@
 Tycho is a library for filtering, sorting, and paginating queries in Go APIs. You can use it standalone with our own SQL builder or use the query mods for [sqlboiler](https://github.com/volatiletech/sqlboiler).
 
 ## TODO
-- [ ] Own time format for cursor parsing values
+- [x] Multiple params
+- [ ] Own time format for cursor parsing values | remove constant
 - [ ] More values for cursor like int, float, bool, etc.
 - [ ] Include columns in cursor (col:value)
-- [ ] Multiple params
 - [ ] Fix backward cursor pagination
 - [ ] Update pagination docs
+- [ ] Case agnostic (snake, camel,pascal, etc.) 
+  - Option: we can also make a global struct (dialect) and run all parsing functions on that struct
 
 ## Installation
 
@@ -108,8 +110,8 @@ gt (greater than): number, date
 gte (greater than or equal): number, date
 lt (less than): number, date
 lte (less than or equal): number, date
-in (in): any
-nin (not in): any
+in (in): []any
+nin (not in): []any
 c (contains): string
 nc (not contains): string
 sw (starts with): string
@@ -118,10 +120,25 @@ null (is null): boolean
 ```
 
 ## Sorting
+You can add multiple sorting columns. When the first one has duplicate values, it will sort by the next column etc.
 
 ```
-https://domain.com/endpoint?sorting=[{"colunn":"name", "order":"ASC"}]
+https://domain.com/endpoint?sort=[{"colunn":"name", "order":"ASC"}]
 ```
+
+## Relation
+You can add the relations you want to include in the response.
+
+```
+https://domain.com/endpoint?relation=["table", "table2"]
+```
+
+## Param
+
+``` 
+https://domain.com/endpoint/:param
+```
+
 
 ## Offset Pagination
 
@@ -135,22 +152,96 @@ https://domain.com/endpoint?pagination={"page": 1, "limit": 10}
 https://domain.com/endpoint?pagination={"cursor": "optional cursor", "limit": 10}
 ```
 
-## Relation
 
-```
-https://domain.com/endpoint?relation=["table", "table2"]
-```
 
-## Param
+## Typescript
 
-``` 
-https://domain.com/endpoint/:param
-```
+```typescript
+export interface Query {
+  filter?: Filter;
+  sort?: Sort[];
+  pagination?: CursorPagination;
+  expand?: string[];
+  onBehalfOfAccountId?: string;
+}
 
-## Search
+export type FilterType = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'c' | 'nc' | 'sw' | 'ew' | 'null';
+export type FilterTypeValue = string | number | boolean | string[];
+export type FilterColumn = Record<string, Partial<Record<FilterType | 'or', FilterTypeValue>>>;
+export type Filter = FilterColumn | Record<'or', FilterColumn>;
 
-```
-https://domain.com/endpoint?search=term
+export type Sort = {
+  column: string;
+  order: 'ASC' | 'DESC';
+};
+
+export type CursorPagination = {
+  limit: number;
+  cursor?: string;
+  page?: number;
+};
+
+export function createQuery(q: Query | undefined) {
+  if (!q) {
+    return '';
+  }
+  return Object.entries(q)
+    .map(([key, value]) => {
+      if (typeof value === 'object') {
+        const newValue = removeEmptyTreeValues(value);
+        if (newValue) {
+          if (typeof newValue === 'object') {
+            return `&${key}=${encodeURIComponent(JSON.stringify(newValue))}`;
+          }
+
+          return `&${key}=${encodeURIComponent(newValue)}`;
+        }
+
+        return false;
+      }
+
+      if (value !== undefined && value !== null) {
+        return `&${key}=${encodeURIComponent(value)}`;
+      }
+    })
+    .filter(Boolean)
+    .join('')
+    .replace('&', '?');
+}
+
+function removeEmptyTreeValues(obj: Record<string, any> | undefined): Record<string, any> | undefined {
+  if (!obj) {
+    return undefined;
+  }
+
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) {
+      return undefined;
+    }
+
+    return obj.filter(Boolean);
+  }
+
+  const object: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'object') {
+      const treeValues = removeEmptyTreeValues(value);
+      if (!treeValues) continue;
+      if (Object.keys(treeValues).length > 0) {
+        object[key] = treeValues;
+      }
+      continue;
+    }
+
+    if (value) {
+      object[key] = value;
+    }
+  }
+
+  return object;
+}
+
 ```
 
 ## License

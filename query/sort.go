@@ -1,16 +1,19 @@
 package query
 
 import (
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
 	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
+// //////////////////////////////////////////////////////////////////
+// Sort
+// //////////////////////////////////////////////////////////////////
+
 type Sort struct {
-	filterAllowedOnColumns TableColumns
-	columnsInMap           map[string]int
-	columns                SortColumnSlice
-	defaultOrderBy         sql.Order
+	ColumnsInMap   map[string]int
+	Columns        SortColumnSlice
+	DefaultOrderBy sql.Order
 }
 
 type SortColumnSlice []SortColumn
@@ -27,18 +30,20 @@ func (s *Sort) Apply(q *Query) {
 	q.setSort(s)
 }
 
-// [{"colunn":"name", "order":"ASC"}]
-
-func ParseSort(raw string, allowedColumns TableColumns) *Sort {
-	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
-	return sortColumnSlice.parse(allowedColumns)
+func (s *Sort) isEmpty() bool {
+	return s == nil || len(s.Columns) <= 0
 }
 
-func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort {
+func ParseSort(raw string, validateFunc ValidateColumn) *Sort {
+	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
+	return sortColumnSlice.parse(validateFunc)
+}
+
+func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn) *Sort {
 	var defaultOrderBy = sql.ASC
 
 	if sortColumnSlice == nil {
-		return &Sort{filterAllowedOnColumns: allowedColumns, defaultOrderBy: defaultOrderBy}
+		return &Sort{DefaultOrderBy: defaultOrderBy}
 	}
 
 	var columns []SortColumn
@@ -46,7 +51,7 @@ func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort
 
 	var i int
 	for _, sortColumn := range *sortColumnSlice {
-		if !sortColumn.Order.IsValid() || !allowedColumns.Has(sortColumn.Column) {
+		if !sortColumn.Order.IsValid() || (validateFunc != nil && !validateFunc(sortColumn.Column)) {
 			continue
 		}
 
@@ -54,7 +59,6 @@ func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort
 		if _, ok := columnsInMap[sortColumn.Column]; ok {
 			continue
 		}
-
 		columns = append(columns, sortColumn)
 		columnsInMap[sortColumn.Column] = i
 		i++
@@ -65,59 +69,54 @@ func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort
 	}
 
 	return &Sort{
-		filterAllowedOnColumns: allowedColumns,
-		columns:                columns,
-		columnsInMap:           columnsInMap,
-		defaultOrderBy:         defaultOrderBy,
+		Columns:        columns,
+		ColumnsInMap:   columnsInMap,
+		DefaultOrderBy: defaultOrderBy,
 	}
 }
 
-func (s *Sort) isEmpty() bool {
-	return s != nil && len(s.columns) <= 0
-}
-
 func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
-	columns := f(s.defaultOrderBy)
+	columns := f(s.DefaultOrderBy)
 
-	if s.isEmpty() {
-		s.columns = columns
+	if len(s.Columns) <= 0 {
+		s.Columns = columns
 		return
 	}
 
 	// This overwrites any sort
 	for _, column := range columns {
-		index, ok := s.columnsInMap[column.Column]
+		index, ok := s.ColumnsInMap[column.Column]
 		if !ok {
-			s.columns = append(s.columns, column)
+			s.Columns = append(s.Columns, column)
 			continue
 		}
 
-		s.columns = append(s.columns[:index], s.columns[index+1:]...) // Remove
-		s.columns = append(s.columns, column)                         // Add to end
-		s.columnsInMap[column.Column] = len(s.columns) - 1            // Update index
+		s.Columns = append(s.Columns[:index], s.Columns[index+1:]...) // Remove
+		s.Columns = append(s.Columns, column)                         // Add to end
+		s.ColumnsInMap[column.Column] = len(s.Columns) - 1            // Update index
 	}
 }
 
 func (s *Sort) SQL(tn string) string {
-	if len(s.columns) <= 0 {
+	if s == nil || len(s.Columns) <= 0 {
 		return ""
 	}
 
 	var orders []string
-	for _, f := range s.columns {
-		orders = append(orders, sql.Column(tn, f.Column), f.Order.String())
+	for _, f := range s.Columns {
+		orders = append(orders, sql.Query(sql.Column(tn, f.Column), f.Order.String()))
 	}
 
-	return sql.Group(orders...)
+	return sql.Query(string(sql.ORDER_BY), sql.Group(orders...))
 }
 
 func (s *Sort) Mods(tn string) []qm.QueryMod {
-	if len(s.columns) <= 0 {
+	if s == nil || len(s.Columns) <= 0 {
 		return nil
 	}
 
 	var mods []qm.QueryMod
-	for _, f := range s.columns {
+	for _, f := range s.Columns {
 		mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Column), f.Order.String())))
 	}
 

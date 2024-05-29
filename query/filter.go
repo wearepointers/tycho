@@ -2,16 +2,22 @@ package query
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
 	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
+////////////////////////////////////////////////////////////////////
+// Filter
+////////////////////////////////////////////////////////////////////
+
 type Filter struct {
-	filterAllowedOnColumns TableColumns
-	columns                []*FilterColumn
-	or                     *Filter
+	Columns []*FilterColumn
+	Or      *Filter
 }
 
 type FilterColumn struct {
@@ -33,20 +39,25 @@ func (f *Filter) Apply(q *Query) {
 	q.setFilter(f)
 }
 
-// {"name": {"eq": "test", "or": "test3"}, "age": {"gte": 34, "lte": 65}, "status": {"in": ["active", "paused"]}, "or": {"name":{"eq": "test2"}}}
+func (f *Filter) isEmpty() bool {
+	return f == nil || len(f.Columns) <= 0 && f.Or == nil
+}
+
 type FilterMap map[string]json.RawMessage
 type FilterMapColumn map[Operator]json.RawMessage
 
-func ParseFilter(raw string, allowedColumns TableColumns) *Filter {
+type ValidateColumn func(k string) bool
+
+func ParseFilter(raw string, validateFunc ValidateColumn) *Filter {
 	filterMap, err := utils.Unmarshal[FilterMap](raw)
 	if err != nil {
 		return nil
 	}
 
-	return filterMap.parse(allowedColumns)
+	return filterMap.parse(validateFunc)
 }
 
-func (filterMap *FilterMap) parse(allowedColumns TableColumns) *Filter {
+func (filterMap *FilterMap) parse(validateFunc ValidateColumn) *Filter {
 	if filterMap == nil {
 		return nil
 	}
@@ -54,18 +65,20 @@ func (filterMap *FilterMap) parse(allowedColumns TableColumns) *Filter {
 	var columns []*FilterColumn
 	var or *Filter
 	for key, value := range *filterMap {
-		if !allowedColumns.Has(key) && !Operator(key).IsOr() {
-			continue
-		}
-
 		s := string(value)
-		if Operator(key).IsOr() {
+
+		if Operator(key).isOr() {
 			filterMap, err := utils.Unmarshal[FilterMap](s)
 			if err != nil {
 				continue
 			}
 
-			or = filterMap.parse(allowedColumns)
+			or = filterMap.parse(validateFunc)
+			continue
+		}
+
+		// Ability to validate column, for example check if column exists in table
+		if validateFunc != nil && !validateFunc(key) {
 			continue
 		}
 
@@ -78,9 +91,8 @@ func (filterMap *FilterMap) parse(allowedColumns TableColumns) *Filter {
 	}
 
 	return &Filter{
-		filterAllowedOnColumns: allowedColumns,
-		columns:                columns,
-		or:                     or,
+		Columns: columns,
+		Or:      or,
 	}
 }
 
@@ -94,13 +106,15 @@ func (filterMapColumn *FilterMapColumn) parse(column string) *FilterColumn {
 
 	for operator, value := range *filterMapColumn {
 		s := string(value)
-		if operator.IsOr() {
+
+		if operator.isOr() {
 			filterMapColumn, err := utils.Unmarshal[FilterMapColumn](s)
 			if err != nil {
 				continue
 			}
 
 			or = filterMapColumn.parse(column)
+
 			continue
 		}
 
@@ -109,7 +123,7 @@ func (filterMapColumn *FilterMapColumn) parse(column string) *FilterColumn {
 			continue
 		}
 
-		if !operator.IsValid(*anyValuePointer) {
+		if !operator.IsValid(anyValuePointer) {
 			continue
 		}
 
@@ -126,28 +140,38 @@ func (filterMapColumn *FilterMapColumn) parse(column string) *FilterColumn {
 	}
 }
 
-func (f *Filter) sql(tn string) (string, []any) {
-	var s []string
+func (f *Filter) SQL(tn string) (string, []any) {
+	if f.isEmpty() {
+		return "", nil
+	}
+
+	var and []string
 	var args []any
 
-	for _, c := range f.columns {
-		s1, args1 := c.sql(tn)
-		if s1 == "" {
+	for _, c := range f.Columns {
+		andSQL, andArgs := c.sql(tn)
+		if andSQL == "" {
 			continue
 		}
 
-		s = append(s, s1)
-		args = append(args, args1...)
+		and = append(and, andSQL)
+		args = append(args, andArgs...)
 	}
 
-	andSQL := sql.Clause(sql.AND, s...)
+	andSQL := sql.Clause(sql.AND, and...)
 
-	if f.or != nil {
-		andSQL = sql.Expr(andSQL)
-
-		orSQL, orArgs := f.or.sql(tn)
+	if f.Or != nil {
+		orSQL, orArgs := f.Or.SQL(tn)
 		if orSQL == "" {
 			return andSQL, args
+		}
+
+		if len(and) > 1 {
+			andSQL = sql.Expr(andSQL)
+		}
+
+		if len(orArgs) > 1 && (!strings.HasPrefix(orSQL, "(") || !strings.HasSuffix(orSQL, ")")) {
+			orSQL = sql.Expr(orSQL)
 		}
 
 		return sql.Clause(sql.OR, andSQL, orSQL), append(args, orArgs...)
@@ -156,30 +180,32 @@ func (f *Filter) sql(tn string) (string, []any) {
 	return andSQL, args
 }
 
-func (f *Filter) mods(tn string) []qm.QueryMod {
-	var andMods []qm.QueryMod
-
-	for _, c := range f.columns {
-		cMods := c.mods(tn)
-		if cMods == nil {
-			continue
-		}
-
-		andMods = append(andMods, cMods...)
+func (f *Filter) Mods(tn string) []qm.QueryMod {
+	if f.isEmpty() {
+		return nil
 	}
 
-	if f.or != nil {
-		andMods = []qm.QueryMod{qm.Expr(andMods...)}
+	var and []qm.QueryMod
 
-		orMods := f.or.mods(tn)
+	for _, c := range f.Columns {
+		and = append(and, c.mods(tn)...)
+	}
+
+	if f.Or != nil {
+		orMods := f.Or.Mods(tn)
 		if orMods == nil {
-			return andMods
+			return and
 		}
 
-		return append(andMods, orMods...)
+		if len(and) > 1 {
+			and = []qm.QueryMod{qm.Expr(and...)}
+		}
+
+		return append(and, qm.Or2(qm.Expr(orMods...)))
+
 	}
 
-	return andMods
+	return and
 }
 
 func (f *FilterColumn) sql(tn string) (string, []any) {
@@ -188,7 +214,7 @@ func (f *FilterColumn) sql(tn string) (string, []any) {
 
 	for _, w := range f.Where {
 		column := sql.Column(tn, f.Column)
-		s1, args1 := w.Operator.SQL(column, w.Value)
+		s1, args1 := w.Operator.sql(column, w.Value)
 		if s1 != "" {
 			s = append(s, s1)
 
@@ -239,21 +265,213 @@ func (f *FilterColumn) mods(tn string) []qm.QueryMod {
 			return andMods
 		}
 
-		return []qm.QueryMod{qm.Expr(append(andMods, orMods...)...)}
+		if len(orMods) > 1 {
+			return []qm.QueryMod{qm.Expr(append(andMods, orMods...)...)}
+		}
+
+		return []qm.QueryMod{qm.Expr(append(andMods, qm.Or2(orMods[0]))...)}
 	}
 
 	return andMods
 }
 
-func (f *Filter) SQL(tn string, indexPlaceholders bool) (string, []any) {
-	s, args := f.sql(tn)
-	if indexPlaceholders {
-		return sql.Args(s, "$"), args
-	}
+////////////////////////////////////////////////////////////////////
+// Operator
+////////////////////////////////////////////////////////////////////
 
-	return s, args
+type Operator string
+
+var (
+	equal              Operator = "eq"
+	notEqual           Operator = "neq"
+	greaterThan        Operator = "gt"
+	greaterThanOrEqual Operator = "gte"
+	lessThan           Operator = "lt"
+	lessThanOrEqual    Operator = "lte"
+	in                 Operator = "in"
+	notIn              Operator = "nin"
+	contains           Operator = "c"
+	notContains        Operator = "nc"
+	startsWith         Operator = "sw"
+	endsWith           Operator = "ew"
+	null               Operator = "null"
+	or                 Operator = "or"
+)
+
+var operators = map[Operator]bool{
+	equal:              true,
+	notEqual:           true,
+	greaterThan:        true,
+	greaterThanOrEqual: true,
+	lessThan:           true,
+	lessThanOrEqual:    true,
+	in:                 true,
+	notIn:              true,
+	contains:           true,
+	notContains:        true,
+	startsWith:         true,
+	endsWith:           true,
+	null:               true,
+	or:                 true,
 }
 
-func (f *Filter) Mods(tn string) []qm.QueryMod {
-	return f.mods(tn)
+func (o Operator) IsValid(v *any) bool {
+	if !operators[o] {
+		return false
+	}
+
+	if v != nil {
+		return o.acceptValueKind(v)
+	}
+
+	return false
+}
+
+func (o Operator) acceptValueKind(v *any) bool {
+	pV := *v
+	switch o {
+	case equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, contains, notContains, startsWith, endsWith:
+		if is, _ := utils.IsString(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsInt(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsInt8(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsInt16(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsInt32(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsInt64(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsFloat32(pV); is {
+			return true
+		}
+
+		if is, _ := utils.IsFloat64(pV); is {
+			return true
+		}
+
+		return false
+
+	case in, notIn:
+		if is, _ := utils.IsSlice[any](pV); is {
+			return true
+		}
+
+		return false
+	case null:
+		if is, _ := utils.IsBool(pV); is {
+			return true
+		}
+
+		return false
+	case or:
+		return reflect.Map == reflect.TypeOf(v).Kind()
+	default:
+		return false
+	}
+}
+
+func (o Operator) isOr() bool {
+	return o == or
+}
+
+func (o Operator) sql(c string, v any) (string, any) {
+	switch o {
+	case equal:
+		return sql.Where(c, sql.Equal, "?"), v
+	case notEqual:
+		return sql.Where(c, sql.NotEqual, "?"), v
+	case greaterThan:
+		return sql.Where(c, sql.GreaterThan, "?"), v
+	case greaterThanOrEqual:
+		return sql.Where(c, sql.GreaterThanOrEqual, "?"), v
+	case lessThan:
+		return sql.Where(c, sql.LessThan, "?"), v
+	case lessThanOrEqual:
+		return sql.Where(c, sql.LessThanOrEqual, "?"), v
+	case in:
+		return sql.WhereIn(c, v)
+	case notIn:
+		return sql.WhereNotIn(c, v)
+	case contains:
+		return sql.WhereLike(c, v)
+	case notContains:
+		return sql.WhereNotLike(c, v)
+	case startsWith:
+		return sql.WhereStartsWith(c, v)
+	case endsWith:
+		return sql.WhereEndsWith(c, v)
+	case null:
+		b := v.(bool)
+		if b {
+			return sql.Where(c, sql.IsNull), nil
+		}
+		return sql.Where(c, sql.IsNotNull), nil
+	default:
+		return "", nil
+	}
+}
+
+func (o Operator) mod(c string, v any) qm.QueryMod {
+	switch o {
+	case equal:
+		return qm.Where(sql.Where(c, sql.Equal, "?"), v)
+	case notEqual:
+		return qm.Where(sql.Where(c, sql.NotEqual, "?"), v)
+	case greaterThan:
+		return qm.Where(sql.Where(c, sql.GreaterThan, "?"), v)
+	case greaterThanOrEqual:
+		return qm.Where(sql.Where(c, sql.GreaterThanOrEqual, "?"), v)
+	case lessThan:
+		return qm.Where(sql.Where(c, sql.LessThan, "?"), v)
+	case lessThanOrEqual:
+		return qm.Where(sql.Where(c, sql.LessThanOrEqual, "?"), v)
+	case in:
+		isSlice, val := utils.IsSlice[any](v)
+		if !isSlice {
+			return nil
+		}
+
+		return qm.WhereIn(sql.Query(c, sql.In.String(), "?"), val...)
+	case notIn:
+		isSlice, val := utils.IsSlice[any](v)
+		if !isSlice {
+			return nil
+		}
+
+		return qm.WhereIn(sql.Query(c, sql.NotIn.String(), "?"), val...)
+	case contains:
+		return qm.Where(sql.Where(c, sql.Like, "?"), fmt.Sprint("%", v, "%"))
+	case notContains:
+		return qm.Where(sql.Where(c, sql.NotLike, "?"), fmt.Sprint("%", v, "%"))
+	case startsWith:
+		return qm.Where(sql.Where(c, sql.Like, "?"), fmt.Sprint(v, "%"))
+	case endsWith:
+		return qm.Where(sql.Where(c, sql.Like, "?"), fmt.Sprint("%", v))
+	case null:
+		isBool, val := utils.IsBool(v)
+		if !isBool {
+			return nil
+		}
+
+		if val {
+			return qm.Where(sql.Where(c, sql.IsNull))
+		}
+		return qm.Where(sql.Where(c, sql.IsNotNull))
+	default:
+		return nil
+	}
 }

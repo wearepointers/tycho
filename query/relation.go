@@ -1,16 +1,21 @@
 package query
 
 import (
-	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/strmangle"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/wearepointers/tycho/utils"
 )
 
-// ["relation", "otherrelation"]
+// //////////////////////////////////////////////////////////////////
+// Relation
+// //////////////////////////////////////////////////////////////////
 type Relation []string
 
 func (r *Relation) Apply(q *Query) {
 	q.setRelation(r)
+}
+
+func (r *Relation) isEmpty() bool {
+	return r == nil || len(*r) <= 0
 }
 
 func ParseRelation(raw string) *Relation {
@@ -30,7 +35,7 @@ func (r *Relation) Mods() []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	for _, relation := range *r {
-		mods = append(mods, qm.Load(strmangle.TitleCase(relation), qm.Limit(10)))
+		mods = append(mods, qm.Load(utils.ToPascalCase(relation), qm.Limit(10)))
 	}
 
 	return mods

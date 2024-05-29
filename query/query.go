@@ -5,37 +5,29 @@ import (
 	"github.com/wearepointers/tycho/sql"
 )
 
-type TableColumns map[string]bool
-
-func (c TableColumns) Has(column string) bool {
-	return c[column]
-}
-
 type Query struct {
 	dialect          *Dialect
 	paginationType   PaginationType
 	Filter           *Filter
+	Params           *Params
 	Sort             *Sort
-	OffsetPagination *OffsetPagination
-	CursorPagination *CursorPagination
 	Relation         *Relation
-	Param            *Param
-	Search           *Search
+	OffsetPagination *OffsetPagination
 }
 
-func NewQuery(d Driver, pt PaginationType, hasAutoIncrementID bool, mods ...QueryMod) *Query {
+type QueryMod interface {
+	Apply(q *Query)
+}
+
+func NewQuery(dialect Dialect, mods ...QueryMod) *Query {
 	q := &Query{}
-	q.setDialect(d.Dialect(hasAutoIncrementID))
-	q.setPaginationType(pt)
-	q.applyMods(mods...)
 
-	return q
-}
-
-func (q *Query) applyMods(mods ...QueryMod) {
+	dialect.Apply(q)
 	for _, mod := range mods {
 		mod.Apply(q)
 	}
+
+	return q
 }
 
 func (q *Query) setDialect(d *Dialect) {
@@ -46,16 +38,16 @@ func (q *Query) setPaginationType(pt PaginationType) {
 	q.paginationType = pt
 }
 
+////////////////////////////////////////////////////////////////////
+// Set Mods
+////////////////////////////////////////////////////////////////////
+
 func (q *Query) setFilter(f *Filter) {
 	q.Filter = f
 }
 
-func (q *Query) setOffsetPagination(cp *OffsetPagination) {
-	q.OffsetPagination = cp
-}
-
-func (q *Query) setCursorPagination(cp *CursorPagination) {
-	q.CursorPagination = cp
+func (q *Query) setParams(p *Params) {
+	q.Params = p
 }
 
 func (q *Query) setSort(s *Sort) {
@@ -66,107 +58,86 @@ func (q *Query) setRelation(r *Relation) {
 	q.Relation = r
 }
 
-func (q *Query) setParam(p *Param) {
-	q.Param = p
+func (q *Query) setOffsetPagination(p *OffsetPagination) {
+	q.OffsetPagination = p
 }
 
-func (q *Query) setSearch(s *Search) {
-	q.Search = s
-}
+////////////////////////////////////////////////////////////////////
+// SQL and Mods
+////////////////////////////////////////////////////////////////////
 
 func (q *Query) SQL(tn string) (string, []any) {
 	var s []string
 	var args []any
 
-	if q.Filter != nil || q.Param != nil || q.Search != nil {
+	if !q.Filter.isEmpty() || !q.Params.isEmpty() {
 		s = append(s, "WHERE")
 	}
 
-	if q.Filter != nil {
-		fs, fa := q.Filter.SQL(tn, q.dialect.UseIndexPlaceholders)
+	// Params first because then we can have a params AND filter
+	if !q.Params.isEmpty() {
+		ps, pa := q.Params.SQL(tn)
+
+		s = append(s, ps)
+		args = append(args, pa...)
+	}
+
+	if !q.Filter.isEmpty() {
+		fs, fa := q.Filter.SQL(tn)
+
+		if len(args) > 0 { // same as if !q.Params.isEmpty() { but little safer
+			s = append(s, "AND")
+			fs = sql.Expr(fs)
+		}
 
 		s = append(s, fs)
 		args = append(args, fa...)
 	}
 
-	if q.Param != nil {
-		if len(s) > 0 {
-			s = append(s, "AND")
-		}
-		ps, pa := q.Param.SQL(tn)
-		s = append(s, ps)
-		args = append(args, pa)
-	}
-
-	if q.Search != nil {
-		if len(s) > 0 {
-			s = append(s, "AND")
-		}
-		ss, sa := q.Search.SQL(tn)
-		s = append(s, ss)
-		args = append(args, sa)
-	}
-
-	// Disable sorting here, we do that in cursor pagination if set
-	if !q.Sort.isEmpty() && q.CursorPagination == nil {
+	if !q.Sort.isEmpty() {
 		ss := q.Sort.SQL(tn)
 
 		s = append(s, ss)
-	}
-
-	if q.OffsetPagination != nil {
-		s = append(s, q.OffsetPagination.SQL())
-	}
-
-	if q.CursorPagination != nil && q.OffsetPagination == nil {
-		s = append(s, q.CursorPagination.SQL())
 	}
 
 	if len(s) <= 0 {
 		return "", nil
 	}
 
-	s = append(s, ";")
-	return sql.Query(s...), args
+	sq := sql.Query(s...)
 
-}
-
-func (q *Query) BareMods(tn string) []qm.QueryMod {
-	var mods []qm.QueryMod
-
-	if q.Filter != nil {
-		mods = append(mods, q.Filter.Mods(tn)...)
+	if q.dialect.useIndexPlaceholders {
+		sq = sql.ConvertQuestionMarks(sq)
 	}
 
-	if q.Relation != nil {
-		mods = append(mods, q.Relation.Mods()...)
-	}
+	return sql.QueryEnd(sq), args
 
-	if q.Param != nil {
-		mods = append(mods, q.Param.Mods(tn))
-	}
-
-	return mods
 }
 
 func (q *Query) Mods(tn string) []qm.QueryMod {
-	mods := q.BareMods(tn)
+	var mods []qm.QueryMod
 
-	// Disable sorting here, we do that in cursor pagination if set
-	if !q.Sort.isEmpty() && q.CursorPagination == nil {
+	if !q.Params.isEmpty() {
+		mods = append(mods, q.Params.Mods(tn)...)
+	}
+
+	if !q.Filter.isEmpty() {
+		if !q.Params.isEmpty() {
+			mods = append(mods, qm.Expr(q.Filter.Mods(tn)...))
+		}
+
+		if q.Params.isEmpty() {
+			mods = append(mods, q.Filter.Mods(tn)...)
+		}
+
+	}
+
+	if !q.Sort.isEmpty() {
 		mods = append(mods, q.Sort.Mods(tn)...)
 	}
 
-	if q.OffsetPagination != nil {
-		mods = append(mods, q.OffsetPagination.Mods()...)
-	}
-
-	if q.CursorPagination != nil && q.OffsetPagination == nil {
-		mods = append(mods, q.CursorPagination.Mods(tn)...)
-	}
-
-	if q.Search != nil {
-		mods = append(mods, q.Search.Mods(tn))
+	if !q.Relation.isEmpty() {
+		mods = append(mods, q.Relation.Mods()...)
 	}
 
 	return mods

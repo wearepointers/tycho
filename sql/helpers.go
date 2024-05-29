@@ -3,9 +3,11 @@ package sql
 import (
 	"fmt"
 	"strings"
-
-	"github.com/wearepointers/tycho/utils"
 )
+
+func QueryEnd(s string) string {
+	return fmt.Sprint(s, ";")
+}
 
 func Query(c ...string) string {
 	return strings.Join(c, " ")
@@ -19,20 +21,20 @@ func Expr(s string) string {
 	return fmt.Sprint("(", s, ")")
 }
 
-func Args(sql, prefix string) string {
+func ConvertQuestionMarks(sql string) string {
 	count := strings.Count(sql, "?")
 
 	for i := 1; i <= count; i++ {
-		sql = strings.Replace(sql, "?", fmt.Sprintf("%v%d", prefix, i), 1)
+		sql = strings.Replace(sql, "?", fmt.Sprintf("$%d", i), 1)
 	}
 
 	return sql
 }
 
-func Column(c ...string) string {
-	return utils.Join(c, ".", `"`, `"`)
+func Column(table, column string) string {
+	return fmt.Sprintf(`"%s"."%s"`, table, column)
 }
 
 func Group(s ...string) string {
-	return strings.Join(s, ",")
+	return strings.Join(s, ", ")
 }

@@ -1,0 +1,14 @@
+{
+  "name": "tycho-example",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "mod": "go mod tidy",
+    "setup": "pnpm dc:build && pnpm run mod",
+    "dev": "docker compose up --attach rest-api --no-attach postgres --remove-orphans",
+    "db:migrate": "pnpm dc:run go run ./cmd/server/main.go --db:migrate --db:reset --db:seed && pnpm db:generate",
+    "db:generate": "pnpm dc:run sqlboiler psql -c sqlboiler.toml && pnpm dc:run sqlboiler-erg",
+    "dc:build": "docker compose build",
+    "dc:run": "docker compose run --rm rest-api"
+  }
+}

@@ -1,0 +1,26 @@
+output = "models/dm"
+pkgname = "dm"
+wipe     = true
+no-tests = true
+add-enum-types = true
+add-soft-deletes = true
+blacklist = ["migrations", "schema_migrations"]
+
+[struct-tag-cases]
+json = "camel"
+
+[psql]
+dbname = "tycho"
+host   = "postgres"
+port   = 5432
+user   = "root"
+pass   = "root"
+sslmode = "disable"
+
+[erg]
+output = "models/erg"
+output-ts = "models/models.ts"
+pkgname = "erg"
+wipe    = true
+inline = false
+blacklist = ["*.password", "*.token", "*.*hash", "schema_migrations"]

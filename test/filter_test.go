@@ -2,8 +2,6 @@ package test
 
 import (
 	"testing"
-
-	"github.com/wearepointers/tycho/query"
 )
 
 var filterInputs = []test{
@@ -144,7 +142,7 @@ func TestFilters(t *testing.T) {
 	// We can't test the SQL output directly because the order isn't guaranteed due to maps
 	// Would fail sometimes and pass other times
 	for i, test := range filterInputs {
-		f := query.ParseFilter(test.Input, nil)
+		f := tychoDialect.ParseFilter(test.Input, nil)
 		s, sqlArgs := f.SQL(table)
 
 		// The only test we can do is to check the length of the SQL and SQLArgs

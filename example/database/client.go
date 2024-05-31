@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -20,9 +19,9 @@ func New(migrate, reset, seed bool) (*sql.DB, error) {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	// db.SetMaxOpenConns(25)
+	// db.SetMaxIdleConns(25)
+	// db.SetConnMaxLifetime(time.Hour)
 
 	if migrate {
 		if err := migrater(reset); err != nil {

@@ -34,7 +34,7 @@ func TestParams(t *testing.T) {
 	// We can't test the SQL output directly because the order isn't guaranteed due to maps
 	// Would fail sometimes and pass other times
 	for i, test := range paramInputs {
-		f := query.ParseParams(test.Params...)
+		f := tychoDialect.ParseParams(test.Params...)
 		s, sqlArgs := f.SQL(table)
 
 		// The only test we can do is to check the length of the SQL and SQLArgs

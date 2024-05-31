@@ -34,12 +34,12 @@ func (s *Sort) isEmpty() bool {
 	return s == nil || len(s.Columns) <= 0
 }
 
-func ParseSort(raw string, validateFunc ValidateColumn) *Sort {
+func (d *Dialect) ParseSort(raw string, validateFunc ValidateColumn) *Sort {
 	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
-	return sortColumnSlice.parse(validateFunc)
+	return sortColumnSlice.parse(validateFunc, d.DBCasing)
 }
 
-func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn) *Sort {
+func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn, dbCasing Casing) *Sort {
 	var defaultOrderBy = sql.ASC
 
 	if sortColumnSlice == nil {
@@ -54,6 +54,8 @@ func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn) *Sort
 		if !sortColumn.Order.IsValid() || (validateFunc != nil && !validateFunc(sortColumn.Column)) {
 			continue
 		}
+
+		sortColumn.Column = dbCasing.string(sortColumn.Column) // Makes the column case agnostic
 
 		// Duplicate catch
 		if _, ok := columnsInMap[sortColumn.Column]; ok {
@@ -75,27 +77,27 @@ func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn) *Sort
 	}
 }
 
-func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
-	columns := f(s.DefaultOrderBy)
+// func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
+// 	columns := f(s.DefaultOrderBy)
 
-	if len(s.Columns) <= 0 {
-		s.Columns = columns
-		return
-	}
+// 	if len(s.Columns) <= 0 {
+// 		s.Columns = columns
+// 		return
+// 	}
 
-	// This overwrites any sort
-	for _, column := range columns {
-		index, ok := s.ColumnsInMap[column.Column]
-		if !ok {
-			s.Columns = append(s.Columns, column)
-			continue
-		}
+// 	// This overwrites any sort
+// 	for _, column := range columns {
+// 		index, ok := s.ColumnsInMap[column.Column]
+// 		if !ok {
+// 			s.Columns = append(s.Columns, column)
+// 			continue
+// 		}
 
-		s.Columns = append(s.Columns[:index], s.Columns[index+1:]...) // Remove
-		s.Columns = append(s.Columns, column)                         // Add to end
-		s.ColumnsInMap[column.Column] = len(s.Columns) - 1            // Update index
-	}
-}
+// 		s.Columns = append(s.Columns[:index], s.Columns[index+1:]...) // Remove
+// 		s.Columns = append(s.Columns, column)                         // Add to end
+// 		s.ColumnsInMap[column.Column] = len(s.Columns) - 1            // Update index
+// 	}
+// }
 
 func (s *Sort) SQL(tn string) string {
 	if s == nil || len(s.Columns) <= 0 {

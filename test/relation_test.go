@@ -15,7 +15,7 @@ var relationInputs = []test{
 
 func TestRelation(t *testing.T) {
 	// for i, test := range relationInputs {
-	// 	f := query.ParseRelation(test.Input)
+	// 	f := tychoDialect.ParseRelation(test.Input)
 
 	// 	fmt.Println("-------------------------------------------------------")
 	// 	fmt.Println("Relation input:", i)

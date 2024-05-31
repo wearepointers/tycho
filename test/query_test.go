@@ -39,6 +39,13 @@ var dialect = drivers.Dialect{
 	UseCaseWhenExistsClause: false,
 }
 
+var tychoDialect = query.Dialect{
+	Driver:             query.MySQL,
+	HasAutoIncrementID: false,
+	APICasing:          query.CamelCase,
+	DBCasing:           query.SnakeCase,
+}
+
 var table = "table_name"
 
 // NewQuery initializes a new Query using the passed in QueryMods
@@ -55,17 +62,11 @@ func createTestSQL(sql string) string {
 }
 
 func TestQuery(t *testing.T) {
-	dialect := query.Dialect{
-		Driver:             query.MySQL,
-		HasAutoIncrementID: false,
-		APICasing:          query.CamelCase,
-		DBCasing:           query.SnakeCase,
-	}
 
-	filter := query.ParseFilter(filterInputs[1].Input, nil)
-	params := query.ParseParams(paramInputs[0].Params...)
-	sort := query.ParseSort(sortInputs[0].Input, nil)
-	q := query.NewQuery(dialect, filter, params, sort)
+	filter := tychoDialect.ParseFilter(filterInputs[1].Input, nil)
+	params := tychoDialect.ParseParams(paramInputs[0].Params...)
+	sort := tychoDialect.ParseSort(sortInputs[0].Input, nil)
+	q := tychoDialect.NewQuery(filter, params, sort)
 
 	s, args := q.SQL(table)
 

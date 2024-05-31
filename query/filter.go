@@ -48,16 +48,16 @@ type FilterMapColumn map[Operator]json.RawMessage
 
 type ValidateColumn func(k string) bool
 
-func ParseFilter(raw string, validateFunc ValidateColumn) *Filter {
+func (d *Dialect) ParseFilter(raw string, validateFunc ValidateColumn) *Filter {
 	filterMap, err := utils.Unmarshal[FilterMap](raw)
 	if err != nil {
 		return nil
 	}
 
-	return filterMap.parse(validateFunc)
+	return filterMap.parse(validateFunc, d.DBCasing)
 }
 
-func (filterMap *FilterMap) parse(validateFunc ValidateColumn) *Filter {
+func (filterMap *FilterMap) parse(validateFunc ValidateColumn, dbCasing Casing) *Filter {
 	if filterMap == nil {
 		return nil
 	}
@@ -67,13 +67,15 @@ func (filterMap *FilterMap) parse(validateFunc ValidateColumn) *Filter {
 	for key, value := range *filterMap {
 		s := string(value)
 
+		key := dbCasing.string(key) // makes key case agnostic
+
 		if Operator(key).isOr() {
 			filterMap, err := utils.Unmarshal[FilterMap](s)
 			if err != nil {
 				continue
 			}
 
-			or = filterMap.parse(validateFunc)
+			or = filterMap.parse(validateFunc, dbCasing)
 			continue
 		}
 

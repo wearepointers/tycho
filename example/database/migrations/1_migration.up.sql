@@ -106,6 +106,7 @@ CREATE INDEX event_idx_organization_id ON event (organization_id);
 -- Comment
 CREATE TABLE comment (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL,
     event_id UUID NOT NULL,
     account_id UUID NOT NULL,
     comment TEXT NOT NULL,
@@ -113,6 +114,7 @@ CREATE TABLE comment (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ NULL,
     CONSTRAINT event_comment_pk PRIMARY KEY (id),
+    CONSTRAINT event_comment_fk_organization_id FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT event_comment_fk_event_id FOREIGN KEY (event_id) REFERENCES event (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT event_comment_fk_account_id FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE
 );

@@ -41,10 +41,12 @@ export interface AccountSession extends AccountSessionRelations {
 export interface CommentRelations {
   account?: Account;
   event?: Event;
+  organization?: Organization;
 }
 
 export interface Comment extends CommentRelations {
   id: string;
+  organizationId: string;
   eventId: string;
   accountId: string;
   comment: string;
@@ -73,6 +75,7 @@ export interface Event extends EventRelations {
   customFields?: Record<string, any>
 }
 export interface OrganizationRelations {
+  comments: Comment[];
   events: Event[];
   organizationAccounts: OrganizationAccount[];
 }

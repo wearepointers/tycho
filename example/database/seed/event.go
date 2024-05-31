@@ -10,8 +10,9 @@ import (
 	"github.com/wearepointers/tycho/example/models/dm"
 )
 
-func Events(ctx context.Context, db *sql.DB, organizationID, AccountID string) error {
-	for i := 0; i < 100; i++ {
+func Events(ctx context.Context, db *sql.DB, organizationID, AccountID string) (dm.EventSlice, error) {
+	var eventSlice dm.EventSlice
+	for i := 0; i < 10000; i++ {
 		f := &dm.Event{
 			Name:           fmt.Sprintf("Event %d", i),
 			Description:    fmt.Sprintf("Description %d", i),
@@ -19,11 +20,13 @@ func Events(ctx context.Context, db *sql.DB, organizationID, AccountID string) e
 			OrganizationID: organizationID,
 		}
 		if err := f.Insert(ctx, db, boil.Infer()); err != nil {
-			return err
+			return nil, err
 		}
+
+		eventSlice = append(eventSlice, f)
 		// Avoid same created_at
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 
-	return nil
+	return eventSlice, nil
 }

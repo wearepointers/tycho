@@ -18,7 +18,7 @@ func (r *Relation) isEmpty() bool {
 	return r == nil || len(*r) <= 0
 }
 
-func ParseRelation(raw string) *Relation {
+func (d *Dialect) ParseRelation(raw string) *Relation {
 	relation, err := utils.Unmarshal[Relation](raw)
 	if err != nil {
 		return nil

@@ -24,87 +24,97 @@ import (
 
 // Comment is an object representing the database table.
 type Comment struct {
-	ID        string    `boil:"id" json:"id" toml:"id" yaml:"id"`
-	EventID   string    `boil:"event_id" json:"eventID" toml:"event_id" yaml:"event_id"`
-	AccountID string    `boil:"account_id" json:"accountID" toml:"account_id" yaml:"account_id"`
-	Comment   string    `boil:"comment" json:"comment" toml:"comment" yaml:"comment"`
-	CreatedAt time.Time `boil:"created_at" json:"createdAt" toml:"created_at" yaml:"created_at"`
-	UpdatedAt time.Time `boil:"updated_at" json:"updatedAt" toml:"updated_at" yaml:"updated_at"`
-	DeletedAt null.Time `boil:"deleted_at" json:"deletedAt,omitempty" toml:"deleted_at" yaml:"deleted_at,omitempty"`
+	ID             string    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	OrganizationID string    `boil:"organization_id" json:"organizationID" toml:"organization_id" yaml:"organization_id"`
+	EventID        string    `boil:"event_id" json:"eventID" toml:"event_id" yaml:"event_id"`
+	AccountID      string    `boil:"account_id" json:"accountID" toml:"account_id" yaml:"account_id"`
+	Comment        string    `boil:"comment" json:"comment" toml:"comment" yaml:"comment"`
+	CreatedAt      time.Time `boil:"created_at" json:"createdAt" toml:"created_at" yaml:"created_at"`
+	UpdatedAt      time.Time `boil:"updated_at" json:"updatedAt" toml:"updated_at" yaml:"updated_at"`
+	DeletedAt      null.Time `boil:"deleted_at" json:"deletedAt,omitempty" toml:"deleted_at" yaml:"deleted_at,omitempty"`
 
 	R *commentR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L commentL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var CommentColumns = struct {
-	ID        string
-	EventID   string
-	AccountID string
-	Comment   string
-	CreatedAt string
-	UpdatedAt string
-	DeletedAt string
+	ID             string
+	OrganizationID string
+	EventID        string
+	AccountID      string
+	Comment        string
+	CreatedAt      string
+	UpdatedAt      string
+	DeletedAt      string
 }{
-	ID:        "id",
-	EventID:   "event_id",
-	AccountID: "account_id",
-	Comment:   "comment",
-	CreatedAt: "created_at",
-	UpdatedAt: "updated_at",
-	DeletedAt: "deleted_at",
+	ID:             "id",
+	OrganizationID: "organization_id",
+	EventID:        "event_id",
+	AccountID:      "account_id",
+	Comment:        "comment",
+	CreatedAt:      "created_at",
+	UpdatedAt:      "updated_at",
+	DeletedAt:      "deleted_at",
 }
 
 var CommentTableColumns = struct {
-	ID        string
-	EventID   string
-	AccountID string
-	Comment   string
-	CreatedAt string
-	UpdatedAt string
-	DeletedAt string
+	ID             string
+	OrganizationID string
+	EventID        string
+	AccountID      string
+	Comment        string
+	CreatedAt      string
+	UpdatedAt      string
+	DeletedAt      string
 }{
-	ID:        "comment.id",
-	EventID:   "comment.event_id",
-	AccountID: "comment.account_id",
-	Comment:   "comment.comment",
-	CreatedAt: "comment.created_at",
-	UpdatedAt: "comment.updated_at",
-	DeletedAt: "comment.deleted_at",
+	ID:             "comment.id",
+	OrganizationID: "comment.organization_id",
+	EventID:        "comment.event_id",
+	AccountID:      "comment.account_id",
+	Comment:        "comment.comment",
+	CreatedAt:      "comment.created_at",
+	UpdatedAt:      "comment.updated_at",
+	DeletedAt:      "comment.deleted_at",
 }
 
 // Generated where
 
 var CommentWhere = struct {
-	ID        whereHelperstring
-	EventID   whereHelperstring
-	AccountID whereHelperstring
-	Comment   whereHelperstring
-	CreatedAt whereHelpertime_Time
-	UpdatedAt whereHelpertime_Time
-	DeletedAt whereHelpernull_Time
+	ID             whereHelperstring
+	OrganizationID whereHelperstring
+	EventID        whereHelperstring
+	AccountID      whereHelperstring
+	Comment        whereHelperstring
+	CreatedAt      whereHelpertime_Time
+	UpdatedAt      whereHelpertime_Time
+	DeletedAt      whereHelpernull_Time
 }{
-	ID:        whereHelperstring{field: "\"comment\".\"id\""},
-	EventID:   whereHelperstring{field: "\"comment\".\"event_id\""},
-	AccountID: whereHelperstring{field: "\"comment\".\"account_id\""},
-	Comment:   whereHelperstring{field: "\"comment\".\"comment\""},
-	CreatedAt: whereHelpertime_Time{field: "\"comment\".\"created_at\""},
-	UpdatedAt: whereHelpertime_Time{field: "\"comment\".\"updated_at\""},
-	DeletedAt: whereHelpernull_Time{field: "\"comment\".\"deleted_at\""},
+	ID:             whereHelperstring{field: "\"comment\".\"id\""},
+	OrganizationID: whereHelperstring{field: "\"comment\".\"organization_id\""},
+	EventID:        whereHelperstring{field: "\"comment\".\"event_id\""},
+	AccountID:      whereHelperstring{field: "\"comment\".\"account_id\""},
+	Comment:        whereHelperstring{field: "\"comment\".\"comment\""},
+	CreatedAt:      whereHelpertime_Time{field: "\"comment\".\"created_at\""},
+	UpdatedAt:      whereHelpertime_Time{field: "\"comment\".\"updated_at\""},
+	DeletedAt:      whereHelpernull_Time{field: "\"comment\".\"deleted_at\""},
 }
 
 // CommentRels is where relationship names are stored.
 var CommentRels = struct {
-	Account string
-	Event   string
+	Account      string
+	Event        string
+	Organization string
 }{
-	Account: "Account",
-	Event:   "Event",
+	Account:      "Account",
+	Event:        "Event",
+	Organization: "Organization",
 }
 
 // commentR is where relationships are stored.
 type commentR struct {
-	Account *Account `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	Event   *Event   `boil:"Event" json:"Event" toml:"Event" yaml:"Event"`
+	Account      *Account      `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
+	Event        *Event        `boil:"Event" json:"Event" toml:"Event" yaml:"Event"`
+	Organization *Organization `boil:"Organization" json:"Organization" toml:"Organization" yaml:"Organization"`
 }
 
 // NewStruct creates a new relationship struct
@@ -126,12 +136,19 @@ func (r *commentR) GetEvent() *Event {
 	return r.Event
 }
 
+func (r *commentR) GetOrganization() *Organization {
+	if r == nil {
+		return nil
+	}
+	return r.Organization
+}
+
 // commentL is where Load methods for each relationship are stored.
 type commentL struct{}
 
 var (
-	commentAllColumns            = []string{"id", "event_id", "account_id", "comment", "created_at", "updated_at", "deleted_at"}
-	commentColumnsWithoutDefault = []string{"event_id", "account_id", "comment"}
+	commentAllColumns            = []string{"id", "organization_id", "event_id", "account_id", "comment", "created_at", "updated_at", "deleted_at"}
+	commentColumnsWithoutDefault = []string{"organization_id", "event_id", "account_id", "comment"}
 	commentColumnsWithDefault    = []string{"id", "created_at", "updated_at", "deleted_at"}
 	commentPrimaryKeyColumns     = []string{"id"}
 	commentGeneratedColumns      = []string{}
@@ -464,6 +481,17 @@ func (o *Comment) Event(mods ...qm.QueryMod) eventQuery {
 	return Events(queryMods...)
 }
 
+// Organization pointed to by the foreign key.
+func (o *Comment) Organization(mods ...qm.QueryMod) organizationQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.OrganizationID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Organizations(queryMods...)
+}
+
 // LoadAccount allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (commentL) LoadAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeComment interface{}, mods queries.Applicator) error {
@@ -706,6 +734,127 @@ func (commentL) LoadEvent(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
+// LoadOrganization allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (commentL) LoadOrganization(ctx context.Context, e boil.ContextExecutor, singular bool, maybeComment interface{}, mods queries.Applicator) error {
+	var slice []*Comment
+	var object *Comment
+
+	if singular {
+		var ok bool
+		object, ok = maybeComment.(*Comment)
+		if !ok {
+			object = new(Comment)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeComment)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeComment))
+			}
+		}
+	} else {
+		s, ok := maybeComment.(*[]*Comment)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeComment)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeComment))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &commentR{}
+		}
+		args[object.OrganizationID] = struct{}{}
+
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &commentR{}
+			}
+
+			args[obj.OrganizationID] = struct{}{}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`organization`),
+		qm.WhereIn(`organization.id in ?`, argsSlice...),
+		qmhelper.WhereIsNull(`organization.deleted_at`),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Organization")
+	}
+
+	var resultSlice []*Organization
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Organization")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for organization")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for organization")
+	}
+
+	if len(organizationAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Organization = foreign
+		if foreign.R == nil {
+			foreign.R = &organizationR{}
+		}
+		foreign.R.Comments = append(foreign.R.Comments, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.OrganizationID == foreign.ID {
+				local.R.Organization = foreign
+				if foreign.R == nil {
+					foreign.R = &organizationR{}
+				}
+				foreign.R.Comments = append(foreign.R.Comments, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetAccount of the comment to the related item.
 // Sets o.R.Account to related.
 // Adds o to related.R.Comments.
@@ -791,6 +940,53 @@ func (o *Comment) SetEvent(ctx context.Context, exec boil.ContextExecutor, inser
 
 	if related.R == nil {
 		related.R = &eventR{
+			Comments: CommentSlice{o},
+		}
+	} else {
+		related.R.Comments = append(related.R.Comments, o)
+	}
+
+	return nil
+}
+
+// SetOrganization of the comment to the related item.
+// Sets o.R.Organization to related.
+// Adds o to related.R.Comments.
+func (o *Comment) SetOrganization(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Organization) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"comment\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"organization_id"}),
+		strmangle.WhereClause("\"", "\"", 2, commentPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.OrganizationID = related.ID
+	if o.R == nil {
+		o.R = &commentR{
+			Organization: related,
+		}
+	} else {
+		o.R.Organization = related
+	}
+
+	if related.R == nil {
+		related.R = &organizationR{
 			Comments: CommentSlice{o},
 		}
 	} else {

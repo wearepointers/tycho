@@ -24,8 +24,15 @@ func seeder(db *sql.DB) error {
 		return err
 	}
 
-	if err := seed.Events(ctx, db, o.ID, a.ID); err != nil {
+	events, err := seed.Events(ctx, db, o.ID, a.ID)
+	if err != nil {
 		return err
+	}
+
+	for _, event := range events[:50] {
+		if err := seed.Comments(ctx, db, event.ID, o.ID, a.ID); err != nil {
+			return err
+		}
 	}
 
 	return nil

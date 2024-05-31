@@ -2,8 +2,6 @@ package test
 
 import (
 	"testing"
-
-	"github.com/wearepointers/tycho/query"
 )
 
 var sortInputs = []test{
@@ -37,7 +35,7 @@ func TestSorts(t *testing.T) {
 	// We can't test the SQL output directly because the order isn't guaranteed due to maps
 	// Would fail sometimes and pass other times
 	for i, test := range sortInputs {
-		f := query.ParseSort(test.Input, nil)
+		f := tychoDialect.ParseSort(test.Input, nil)
 		s := f.SQL(table)
 
 		// The only test we can do is to check the length of the SQL and SQLArgs

@@ -7,16 +7,18 @@ import (
 )
 
 type Comment struct {
-	ID        string     `json:"id,omitempty" toml:"id" yaml:"id"`
-	EventID   string     `json:"eventId,omitempty" toml:"event_id" yaml:"event_id"`
-	AccountID string     `json:"accountId,omitempty" toml:"account_id" yaml:"account_id"`
-	Comment   string     `json:"comment,omitempty" toml:"comment" yaml:"comment"`
-	CreatedAt time.Time  `json:"createdAt,omitempty" toml:"created_at" yaml:"created_at"`
-	UpdatedAt time.Time  `json:"updatedAt,omitempty" toml:"updated_at" yaml:"updated_at"`
-	DeletedAt *time.Time `json:"deletedAt,omitempty" toml:"deleted_at" yaml:"deleted_at"`
+	ID             string     `json:"id,omitempty" toml:"id" yaml:"id"`
+	OrganizationID string     `json:"organizationId,omitempty" toml:"organization_id" yaml:"organization_id"`
+	EventID        string     `json:"eventId,omitempty" toml:"event_id" yaml:"event_id"`
+	AccountID      string     `json:"accountId,omitempty" toml:"account_id" yaml:"account_id"`
+	Comment        string     `json:"comment,omitempty" toml:"comment" yaml:"comment"`
+	CreatedAt      time.Time  `json:"createdAt,omitempty" toml:"created_at" yaml:"created_at"`
+	UpdatedAt      time.Time  `json:"updatedAt,omitempty" toml:"updated_at" yaml:"updated_at"`
+	DeletedAt      *time.Time `json:"deletedAt,omitempty" toml:"deleted_at" yaml:"deleted_at"`
 
-	Account *Account `json:"account,omitempty" toml:"account" yaml:"account"`
-	Event   *Event   `json:"event,omitempty" toml:"event" yaml:"event"`
+	Account      *Account      `json:"account,omitempty" toml:"account" yaml:"account"`
+	Event        *Event        `json:"event,omitempty" toml:"event" yaml:"event"`
+	Organization *Organization `json:"organization,omitempty" toml:"organization" yaml:"organization"`
 
 	CustomFields `json:"customFields,omitempty" toml:"custom_fields" yaml:"custom_fields"`
 }
@@ -40,13 +42,14 @@ func ToComments(a dm.CommentSlice, acf CustomFieldsSlice, exclude ...string) Com
 
 func ToComment(a *dm.Comment, customFields CustomFields, exclude ...string) *Comment {
 	p := Comment{
-		ID:        a.ID,
-		EventID:   a.EventID,
-		AccountID: a.AccountID,
-		Comment:   a.Comment,
-		CreatedAt: a.CreatedAt,
-		UpdatedAt: a.UpdatedAt,
-		DeletedAt: nullDotTimeToTimePtr(a.DeletedAt),
+		ID:             a.ID,
+		OrganizationID: a.OrganizationID,
+		EventID:        a.EventID,
+		AccountID:      a.AccountID,
+		Comment:        a.Comment,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
+		DeletedAt:      nullDotTimeToTimePtr(a.DeletedAt),
 	}
 
 	if a.R != nil {
@@ -55,6 +58,9 @@ func ToComment(a *dm.Comment, customFields CustomFields, exclude ...string) *Com
 		}
 		if a.R.Event != nil && doesNotContain(exclude, "comment.event") {
 			p.Event = ToEvent(a.R.Event, nil, append(exclude, "event.comment")...)
+		}
+		if a.R.Organization != nil && doesNotContain(exclude, "comment.organization") {
+			p.Organization = ToOrganization(a.R.Organization, nil, append(exclude, "organization.comment")...)
 		}
 	}
 

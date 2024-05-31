@@ -38,7 +38,7 @@ func (p *Params) isEmpty() bool {
 	return p == nil || len(p.Params) <= 0
 }
 
-func ParseParams(raw ...Param) *Params {
+func (d *Dialect) ParseParams(raw ...Param) *Params {
 	params := make([]*Param, len(raw))
 	for i, param := range raw {
 		p := param

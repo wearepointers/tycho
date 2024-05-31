@@ -19,10 +19,10 @@ type QueryMod interface {
 	Apply(q *Query)
 }
 
-func NewQuery(dialect Dialect, mods ...QueryMod) *Query {
+func (d *Dialect) NewQuery(mods ...QueryMod) *Query {
 	q := &Query{}
+	d.Apply(q)
 
-	dialect.Apply(q)
 	for _, mod := range mods {
 		mod.Apply(q)
 	}
@@ -100,6 +100,10 @@ func (q *Query) SQL(tn string) (string, []any) {
 		s = append(s, ss)
 	}
 
+	if q.OffsetPagination != nil {
+		s = append(s, q.OffsetPagination.SQL())
+	}
+
 	if len(s) <= 0 {
 		return "", nil
 	}
@@ -134,6 +138,10 @@ func (q *Query) Mods(tn string) []qm.QueryMod {
 
 	if !q.Sort.isEmpty() {
 		mods = append(mods, q.Sort.Mods(tn)...)
+	}
+
+	if q.OffsetPagination != nil {
+		mods = append(mods, q.OffsetPagination.Mods()...)
 	}
 
 	if !q.Relation.isEmpty() {

@@ -19,16 +19,17 @@ var dialect = query.Dialect{
 }
 
 func (r *Router) list(c *gin.Context) {
-	filter := query.ParseFilter(c.Query("filter"), nil)
-	sort := query.ParseSort(c.Query("sort"), nil)
-	relation := query.ParseRelation(c.Query("expand"))
+	filter := dialect.ParseFilter(c.Query("filter"), nil)
+	sort := dialect.ParseSort(c.Query("sort"), nil)
+	relation := dialect.ParseRelation(c.Query("expand"))
 
 	rawPagination := dialect.ParsePagination(c.Query("pagination"))
-	q := query.NewQuery(dialect, rawPagination, filter, sort, relation)
+	q := dialect.NewQuery(rawPagination, filter, sort, relation)
 
 	records, err := dm.Events(q.Mods(table)...).All(c, r.db)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	paginatedRecords, pagination := query.Paginate(q, records)
@@ -39,9 +40,9 @@ func (r *Router) list(c *gin.Context) {
 }
 
 func (r *Router) get(c *gin.Context) {
-	relation := query.ParseRelation(c.Query("expand"))
-	params := query.ParseParams(query.Param{Column: dm.EventColumns.ID, Value: c.Param("id")})
-	q := query.NewQuery(dialect, relation, params)
+	relation := dialect.ParseRelation(c.Query("expand"))
+	params := dialect.ParseParams(query.Param{Column: dm.EventColumns.ID, Value: c.Param("id")})
+	q := dialect.NewQuery(relation, params)
 
 	record, err := dm.Events(q.Mods(table)...).One(c, r.db)
 	if err != nil {
@@ -53,14 +54,14 @@ func (r *Router) get(c *gin.Context) {
 }
 
 func (r *Router) listComments(c *gin.Context) {
-	filter := query.ParseFilter(c.Query("filter"), nil)
-	sort := query.ParseSort(c.Query("sort"), nil)
-	relation := query.ParseRelation(c.Query("expand"))
+	filter := dialect.ParseFilter(c.Query("filter"), nil)
+	sort := dialect.ParseSort(c.Query("sort"), nil)
+	relation := dialect.ParseRelation(c.Query("expand"))
 
-	params := query.ParseParams(query.Param{Column: dm.CommentColumns.EventID, Value: c.Param("id")})
+	params := dialect.ParseParams(query.Param{Column: dm.CommentColumns.EventID, Value: c.Param("id")})
 
 	rawPagination := dialect.ParsePagination(c.Query("pagination"))
-	q := query.NewQuery(dialect, rawPagination, filter, sort, relation, params)
+	q := dialect.NewQuery(rawPagination, filter, sort, relation, params)
 
 	// So now we need the param of events, but only based on event_id
 	records, err := dm.Comments(q.Mods(dm.TableNames.Comment)...).All(c, r.db)

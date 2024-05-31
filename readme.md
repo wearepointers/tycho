@@ -9,8 +9,8 @@ Tycho is a library for filtering, sorting, and paginating queries in Go APIs. Yo
 - [ ] Include columns in cursor (col:value)
 - [ ] Fix backward cursor pagination
 - [ ] Update pagination docs
-- [ ] Case agnostic (snake, camel,pascal, etc.) 
-  - Option: we can also make a global struct (dialect) and run all parsing functions on that struct
+- [x] Case agnostic (snake, camel,pascal, etc.) 
+- [ ] Remove all exported fields, only keep the enums and dialect
 
 ## Installation
 

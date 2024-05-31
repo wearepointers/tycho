@@ -13,6 +13,7 @@ type Organization struct {
 	UpdatedAt time.Time  `json:"updatedAt,omitempty" toml:"updated_at" yaml:"updated_at"`
 	DeletedAt *time.Time `json:"deletedAt,omitempty" toml:"deleted_at" yaml:"deleted_at"`
 
+	Comments             CommentSlice             `json:"comments,omitempty" toml:"comments" yaml:"comments"`
 	Events               EventSlice               `json:"events,omitempty" toml:"events" yaml:"events"`
 	OrganizationAccounts OrganizationAccountSlice `json:"organizationAccounts,omitempty" toml:"organization_accounts" yaml:"organization_accounts"`
 
@@ -46,6 +47,9 @@ func ToOrganization(a *dm.Organization, customFields CustomFields, exclude ...st
 	}
 
 	if a.R != nil {
+		if a.R.Comments != nil && doesNotContain(exclude, "organization.comment") {
+			p.Comments = ToComments(a.R.Comments, nil, append(exclude, "comment.organization")...)
+		}
 		if a.R.Events != nil && doesNotContain(exclude, "organization.event") {
 			p.Events = ToEvents(a.R.Events, nil, append(exclude, "event.organization")...)
 		}

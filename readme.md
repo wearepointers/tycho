@@ -4,13 +4,15 @@ Tycho is a library for filtering, sorting, and paginating queries in Go APIs. Yo
 
 ## TODO
 - [x] Multiple params
-- [ ] Own time format for cursor parsing values | remove constant
-- [ ] More values for cursor like int, float, bool, etc.
-- [ ] Include columns in cursor (col:value)
-- [ ] Fix backward cursor pagination
-- [ ] Update pagination docs
 - [x] Case agnostic (snake, camel,pascal, etc.) 
-- [ ] Remove all exported fields, only keep the enums and dialect
+- [ ] Update docs
+- [ ] Implement cursor pagination
+  - [ ] Own time format for cursor parsing values | remove constant
+  - [ ] More values for cursor like int, float, bool, etc.
+  - [ ] Include columns in cursor (col:value)
+  - [ ] Fix backward cursor pagination
+  - [ ] Update pagination docs
+
 
 ## Installation
 
@@ -30,65 +32,97 @@ import (
    "github.com/gin-gonic/gin"
 )
 
-// To prevent filtering/sorting on columns that don't exist or shouldn't be filtered/sorted on
-var TablesWithColumnsMap = map[string]map[string]bool{
-	"table_name": {
-		"id":   true,
-		"name": true,
-		"url":  true,
-		"tag":  false,
-		"domain": true,
-		// ...
-	},
+// Place this at 1 place in your code.
+var dialect = query.Dialect{
+	Driver:             query.Postgres,
+	HasAutoIncrementID: false,
+	APICasing:          query.CamelCase,
+	DBCasing:           query.SnakeCase,
+	PaginationType:     query.OffsetPagination,
+	MaxLimit:           10,
 }
 
-func (s *Service) get(c *gin.Context) {
-	// TablesWithColumnsMap can be nil if you want to allow filtering/sorting without checking
-	// Search columns can be none if you don't want to allow searching
-	selectQuery := ParseListQuery(c, TablesWithColumnsMap[dm.TableNames.TableName], "id", "name", "url")
-	tychoSQL, tychoArgs := selectQuery.SQL(dm.TableNames.TableName) // Get the SQL and args via Tycho
+// GET /events
+func (r *Router) list(c *gin.Context) {
+	filter := dialect.ParseFilter(c.Query("filter"), nil)
+	sort := dialect.ParseSort(c.Query("sort"), nil)
+	relation := dialect.ParseRelation(c.Query("expand"))
 
-	sqlBoilerMods := append(selectQuery.Mods(dm.TableNames.TableName), qm.From(dm.TableNames.TableName)) // Mods is for list, bareMods is for update, count, etc.
-	sqlBoilerSQL, sqlBoilerArgs := queries.BuildQuery(dm.NewQuery(sqlBoilerMods...)) // Get the SQL and args via SQLboiler
+	rawPagination := dialect.ParsePagination(c.Query("pagination"))
+	q := dialect.NewQuery(rawPagination, filter, sort, relation)
 
-	links, _ := dm.Links(selectQuery.Mods(dm.TableNames.TableName)...).All(c, s.db) // Get the links via SQLboiler
+	sqlBoilerMods := q.Mods(dm.TableNames.Event)
+	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
 
-	paginatedRecords, pagination := query.Paginate(paginationType, pm.Query, links)
+	records, err := dm.Events(sqlBoilerMods...).All(c, r.db)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	server.Return(c, gin.H{
-		"tychoSQL":      tychoSQL,
-		"tychoArgs":     tychoArgs,
-		"sqlBoilerSQL":  sqlBoilerSQL,
-		"sqlBoilerArgs": sqlBoilerArgs,
-		"links":         links,
-		"records":       paginatedRecords,
-		"pagination":    pagination,
+	paginatedRecords, pagination := query.Paginate(q, records)
+	c.JSON(http.StatusOK, gin.H{
+		"tychoSQL":         tychoSQL,
+		"tychoArgs":        tychoArgs,
+		"sqlBoilerMods":    sqlBoilerMods,
+		"records":          records,
+		"paginatedRecords": paginatedRecords,
+		"pagination":       pagination,
 	})
 }
 
-const (
-	maxLimit = 50
-	driver   = query.Postgres
-	paginationType = query.CursorPaginationType
-)
+// GET /events/:id
+func (r *Router) get(c *gin.Context) {
+	relation := dialect.ParseRelation(c.Query("expand"))
+	params := dialect.ParseParams(query.NewParam(dm.EventColumns.ID, c.Param("id")))
+	q := dialect.NewQuery(relation, params)
 
-// For list queries, but used with bareMods for single result queries (like sum, count, etc.)
-func ParseListQuery(c *gin.Context, tc query.TableColumns, searchColumns ...string) *query.Query {
-	filter := query.ParseFilter(c.Query("filter"), tc)
-	sort := query.ParseSort(c.Query("sort"), tc)
-	relation := query.ParseRelation(c.Query("expand"))
-	search := query.ParseSearch(c.Query("search"), searchColumns)
+  sqlBoilerMods := q.Mods(dm.TableNames.Event)
+	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
 
-	pagination := query.ParsePagination(c.Query("pagination"), paginationType, maxLimit, false, sort)
-	return query.NewQuery(driver, filter, sort, pagination, relation, search)
+	record, err := dm.Events(sqlBoilerMods...).One(c, r.db)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+    "tychoSQL":         tychoSQL,
+		"tychoArgs":        tychoArgs,
+		"sqlBoilerMods":    sqlBoilerMods,
+    "record": record,
+  })
 }
 
-// For single queries
-func ParseSingleQuery(c *gin.Context, column string) *query.Query {
-	param := query.ParseParam(column, c.Param(column))
-	relation := query.ParseRelation(c.Query("expand"))
+// GET /events/:id/comments
+func (r *Router) listComments(c *gin.Context) {
+	filter := dialect.ParseFilter(c.Query("filter"), nil)
+	sort := dialect.ParseSort(c.Query("sort"), nil)
+	relation := dialect.ParseRelation(c.Query("expand"))
 
-	return query.NewQuery(query.Postgres, nil, nil, relation, param)
+	params := dialect.ParseParams(query.NewParam(dm.CommentColumns.EventID, c.Param("id")))
+
+	rawPagination := dialect.ParsePagination(c.Query("pagination"))
+	q := dialect.NewQuery(rawPagination, filter, sort, relation, params)
+
+	sqlBoilerMods := q.Mods(dm.TableNames.Event)
+	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
+
+	records, err := dm.Comments(sqlBoilerMods...).All(c, r.db)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	paginatedRecords, pagination := query.Paginate(q, records)
+	c.JSON(http.StatusOK, gin.H{
+		"tychoSQL":         tychoSQL,
+		"tychoArgs":        tychoArgs,
+		"sqlBoilerMods":    sqlBoilerMods,
+		"records":          records,
+		"paginatedRecords": paginatedRecords,
+		"pagination":       pagination,
+	})
 }
 
 

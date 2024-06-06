@@ -17,23 +17,3 @@ func StructToJSON[T any](v T) string {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	return string(b)
 }
-
-func OmitemptyMap(v map[string]any) map[string]any {
-	for key, value := range v {
-		if value == nil {
-			delete(v, key)
-		}
-
-		isString, s := IsString(value)
-		if isString && s == "" {
-			delete(v, key)
-		}
-
-		isBool, b := IsBool(value)
-		if isBool && !b {
-			delete(v, key)
-		}
-	}
-
-	return v
-}

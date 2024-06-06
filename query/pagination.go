@@ -78,15 +78,12 @@ func paginateOffsetPagination[T any](p *offsetPagination, apiC casing, data []*T
 		prevPageCursor = ""
 	}
 
-	// TODO: find another way to do this
-	r := utils.OmitemptyMap(PaginationResponse{
+	return cData, &PaginationResponse{
 		apiC.string("hasNextPage"):    hasNextPage,
 		apiC.string("nextPageCursor"): nextPageCursor,
 		apiC.string("hasPrevPage"):    hasPrevPage,
 		apiC.string("prevPageCursor"): prevPageCursor,
-	})
-
-	return cData, &r
+	}
 }
 
 func (d *Dialect) parseOffsetPagination(raw string) *offsetPagination {

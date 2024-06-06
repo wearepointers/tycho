@@ -7,19 +7,19 @@ import (
 
 type Query struct {
 	dialect          *Dialect
-	paginationType   PaginationType
-	Filter           *Filter
-	Params           *Params
-	Sort             *Sort
-	Relation         *Relation
-	OffsetPagination *OffsetPagination
+	paginationType   paginationType
+	Filter           *filter
+	Params           *params
+	Sort             *sort
+	Relation         *relation
+	OffsetPagination *offsetPagination
 }
 
-type QueryMod interface {
+type queryMod interface {
 	Apply(q *Query)
 }
 
-func (d *Dialect) NewQuery(mods ...QueryMod) *Query {
+func (d *Dialect) NewQuery(mods ...queryMod) *Query {
 	q := &Query{}
 	d.Apply(q)
 
@@ -34,7 +34,7 @@ func (q *Query) setDialect(d *Dialect) {
 	q.dialect = d
 }
 
-func (q *Query) setPaginationType(pt PaginationType) {
+func (q *Query) setPaginationType(pt paginationType) {
 	q.paginationType = pt
 }
 
@@ -42,23 +42,23 @@ func (q *Query) setPaginationType(pt PaginationType) {
 // Set Mods
 ////////////////////////////////////////////////////////////////////
 
-func (q *Query) setFilter(f *Filter) {
+func (q *Query) setFilter(f *filter) {
 	q.Filter = f
 }
 
-func (q *Query) setParams(p *Params) {
+func (q *Query) setParams(p *params) {
 	q.Params = p
 }
 
-func (q *Query) setSort(s *Sort) {
+func (q *Query) setSort(s *sort) {
 	q.Sort = s
 }
 
-func (q *Query) setRelation(r *Relation) {
+func (q *Query) setRelation(r *relation) {
 	q.Relation = r
 }
 
-func (q *Query) setOffsetPagination(p *OffsetPagination) {
+func (q *Query) setOffsetPagination(p *offsetPagination) {
 	q.OffsetPagination = p
 }
 

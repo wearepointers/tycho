@@ -10,19 +10,19 @@ import (
 // Sort
 // //////////////////////////////////////////////////////////////////
 
-type Sort struct {
+type sort struct {
 	ColumnsInMap   map[string]int
-	Columns        SortColumnSlice
+	Columns        sortColumnSlice
 	DefaultOrderBy sql.Order
 }
 
-type SortColumnSlice []SortColumn
-type SortColumn struct {
+type sortColumnSlice []sortColumn
+type sortColumn struct {
 	Column string
 	Order  sql.Order
 }
 
-func (s *Sort) Apply(q *Query) {
+func (s *sort) Apply(q *Query) {
 	if s == nil {
 		return
 	}
@@ -30,27 +30,27 @@ func (s *Sort) Apply(q *Query) {
 	q.setSort(s)
 }
 
-func (s *Sort) isEmpty() bool {
+func (s *sort) isEmpty() bool {
 	return s == nil || len(s.Columns) <= 0
 }
 
-func (d *Dialect) ParseSort(raw string, validateFunc ValidateColumn) *Sort {
-	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
+func (d *Dialect) ParseSort(raw string, validateFunc validateColumn) *sort {
+	sortColumnSlice, _ := utils.Unmarshal[sortColumnSlice](raw)
 	return sortColumnSlice.parse(validateFunc, d.DBCasing)
 }
 
-func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn, dbCasing Casing) *Sort {
+func (scs *sortColumnSlice) parse(validateFunc validateColumn, dbCasing casing) *sort {
 	var defaultOrderBy = sql.ASC
 
-	if sortColumnSlice == nil {
-		return &Sort{DefaultOrderBy: defaultOrderBy}
+	if scs == nil {
+		return &sort{DefaultOrderBy: defaultOrderBy}
 	}
 
-	var columns []SortColumn
+	var columns []sortColumn
 	var columnsInMap = make(map[string]int)
 
 	var i int
-	for _, sortColumn := range *sortColumnSlice {
+	for _, sortColumn := range *scs {
 		if !sortColumn.Order.IsValid() || (validateFunc != nil && !validateFunc(sortColumn.Column)) {
 			continue
 		}
@@ -70,7 +70,7 @@ func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn, dbCas
 		defaultOrderBy = columns[0].Order
 	}
 
-	return &Sort{
+	return &sort{
 		Columns:        columns,
 		ColumnsInMap:   columnsInMap,
 		DefaultOrderBy: defaultOrderBy,
@@ -99,7 +99,7 @@ func (sortColumnSlice *SortColumnSlice) parse(validateFunc ValidateColumn, dbCas
 // 	}
 // }
 
-func (s *Sort) SQL(tn string) string {
+func (s *sort) SQL(tn string) string {
 	if s == nil || len(s.Columns) <= 0 {
 		return ""
 	}
@@ -112,7 +112,7 @@ func (s *Sort) SQL(tn string) string {
 	return sql.Query(string(sql.ORDER_BY), sql.Group(orders...))
 }
 
-func (s *Sort) Mods(tn string) []qm.QueryMod {
+func (s *sort) Mods(tn string) []qm.QueryMod {
 	if s == nil || len(s.Columns) <= 0 {
 		return nil
 	}

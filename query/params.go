@@ -9,16 +9,22 @@ import (
 // Param
 ////////////////////////////////////////////////////////////////////
 
-type Param struct {
+type param struct {
 	Column string
 	Value  string
 }
 
-func (p *Param) sql(tn string) (string, string) {
+type ParamSlice []param
+
+func NewParam(column, value string) param {
+	return param{Column: column, Value: value}
+}
+
+func (p *param) sql(tn string) (string, string) {
 	return sql.Where(sql.Column(tn, p.Column), sql.Equal, "?"), p.Value
 }
 
-func (p *Param) mods(tn string) qm.QueryMod {
+func (p *param) mods(tn string) qm.QueryMod {
 	return qm.Where(sql.Where(sql.Column(tn, p.Column), sql.Equal, "?"), p.Value)
 }
 
@@ -26,29 +32,29 @@ func (p *Param) mods(tn string) qm.QueryMod {
 // Params
 ////////////////////////////////////////////////////////////////////
 
-type Params struct {
-	Params []*Param
+type params struct {
+	Params []*param
 }
 
-func (p *Params) Apply(q *Query) {
+func (p *params) Apply(q *Query) {
 	q.setParams(p)
 }
 
-func (p *Params) isEmpty() bool {
+func (p *params) isEmpty() bool {
 	return p == nil || len(p.Params) <= 0
 }
 
-func (d *Dialect) ParseParams(raw ...Param) *Params {
-	params := make([]*Param, len(raw))
+func (d *Dialect) ParseParams(raw ...param) *params {
+	pms := make([]*param, len(raw))
 	for i, param := range raw {
 		p := param
-		params[i] = &p
+		pms[i] = &p
 	}
 
-	return &Params{params}
+	return &params{pms}
 }
 
-func (p *Params) SQL(tn string) (string, []any) {
+func (p *params) SQL(tn string) (string, []any) {
 	var and []string
 	var args []any
 
@@ -67,7 +73,7 @@ func (p *Params) SQL(tn string) (string, []any) {
 	return clause, args
 }
 
-func (p *Params) Mods(tn string) []qm.QueryMod {
+func (p *params) Mods(tn string) []qm.QueryMod {
 	var and []qm.QueryMod
 
 	for _, param := range p.Params {

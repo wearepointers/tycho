@@ -15,23 +15,23 @@ import (
 // Filter
 ////////////////////////////////////////////////////////////////////
 
-type Filter struct {
-	Columns []*FilterColumn
-	Or      *Filter
+type filter struct {
+	Columns []*filterColumn
+	Or      *filter
 }
 
-type FilterColumn struct {
+type filterColumn struct {
 	Column string
-	Where  []*FilterColumnWhere
-	Or     *FilterColumn
+	Where  []*filterColumnWhere
+	Or     *filterColumn
 }
 
-type FilterColumnWhere struct {
-	Operator Operator
+type filterColumnWhere struct {
+	Operator operator
 	Value    any
 }
 
-func (f *Filter) Apply(q *Query) {
+func (f *filter) Apply(q *Query) {
 	if f == nil {
 		return
 	}
@@ -39,17 +39,17 @@ func (f *Filter) Apply(q *Query) {
 	q.setFilter(f)
 }
 
-func (f *Filter) isEmpty() bool {
+func (f *filter) isEmpty() bool {
 	return f == nil || len(f.Columns) <= 0 && f.Or == nil
 }
 
-type FilterMap map[string]json.RawMessage
-type FilterMapColumn map[Operator]json.RawMessage
+type filterMap map[string]json.RawMessage
+type filterMapColumn map[operator]json.RawMessage
 
-type ValidateColumn func(k string) bool
+type validateColumn func(k string) bool
 
-func (d *Dialect) ParseFilter(raw string, validateFunc ValidateColumn) *Filter {
-	filterMap, err := utils.Unmarshal[FilterMap](raw)
+func (d *Dialect) ParseFilter(raw string, validateFunc validateColumn) *filter {
+	filterMap, err := utils.Unmarshal[filterMap](raw)
 	if err != nil {
 		return nil
 	}
@@ -57,20 +57,20 @@ func (d *Dialect) ParseFilter(raw string, validateFunc ValidateColumn) *Filter {
 	return filterMap.parse(validateFunc, d.DBCasing)
 }
 
-func (filterMap *FilterMap) parse(validateFunc ValidateColumn, dbCasing Casing) *Filter {
-	if filterMap == nil {
+func (fm *filterMap) parse(validateFunc validateColumn, dbCasing casing) *filter {
+	if fm == nil {
 		return nil
 	}
 
-	var columns []*FilterColumn
-	var or *Filter
-	for key, value := range *filterMap {
+	var columns []*filterColumn
+	var or *filter
+	for key, value := range *fm {
 		s := string(value)
 
 		key := dbCasing.string(key) // makes key case agnostic
 
-		if Operator(key).isOr() {
-			filterMap, err := utils.Unmarshal[FilterMap](s)
+		if operator(key).isOr() {
+			filterMap, err := utils.Unmarshal[filterMap](s)
 			if err != nil {
 				continue
 			}
@@ -84,7 +84,7 @@ func (filterMap *FilterMap) parse(validateFunc ValidateColumn, dbCasing Casing) 
 			continue
 		}
 
-		filterMapColumn, err := utils.Unmarshal[FilterMapColumn](s)
+		filterMapColumn, err := utils.Unmarshal[filterMapColumn](s)
 		if err != nil {
 			continue
 		}
@@ -92,25 +92,25 @@ func (filterMap *FilterMap) parse(validateFunc ValidateColumn, dbCasing Casing) 
 		columns = append(columns, filterMapColumn.parse(key))
 	}
 
-	return &Filter{
+	return &filter{
 		Columns: columns,
 		Or:      or,
 	}
 }
 
-func (filterMapColumn *FilterMapColumn) parse(column string) *FilterColumn {
-	if filterMapColumn == nil {
+func (fmc *filterMapColumn) parse(column string) *filterColumn {
+	if fmc == nil {
 		return nil
 	}
 
-	var where []*FilterColumnWhere
-	var or *FilterColumn
+	var where []*filterColumnWhere
+	var or *filterColumn
 
-	for operator, value := range *filterMapColumn {
+	for operator, value := range *fmc {
 		s := string(value)
 
 		if operator.isOr() {
-			filterMapColumn, err := utils.Unmarshal[FilterMapColumn](s)
+			filterMapColumn, err := utils.Unmarshal[filterMapColumn](s)
 			if err != nil {
 				continue
 			}
@@ -129,20 +129,20 @@ func (filterMapColumn *FilterMapColumn) parse(column string) *FilterColumn {
 			continue
 		}
 
-		where = append(where, &FilterColumnWhere{
+		where = append(where, &filterColumnWhere{
 			Operator: operator,
 			Value:    *anyValuePointer,
 		})
 	}
 
-	return &FilterColumn{
+	return &filterColumn{
 		Column: column,
 		Where:  where,
 		Or:     or,
 	}
 }
 
-func (f *Filter) SQL(tn string) (string, []any) {
+func (f *filter) SQL(tn string) (string, []any) {
 	if f.isEmpty() {
 		return "", nil
 	}
@@ -182,7 +182,7 @@ func (f *Filter) SQL(tn string) (string, []any) {
 	return andSQL, args
 }
 
-func (f *Filter) Mods(tn string) []qm.QueryMod {
+func (f *filter) Mods(tn string) []qm.QueryMod {
 	if f.isEmpty() {
 		return nil
 	}
@@ -210,7 +210,7 @@ func (f *Filter) Mods(tn string) []qm.QueryMod {
 	return and
 }
 
-func (f *FilterColumn) sql(tn string) (string, []any) {
+func (f *filterColumn) sql(tn string) (string, []any) {
 	var s []string
 	var args []any
 
@@ -249,7 +249,7 @@ func (f *FilterColumn) sql(tn string) (string, []any) {
 	return andSQL, args
 }
 
-func (f *FilterColumn) mods(tn string) []qm.QueryMod {
+func (f *filterColumn) mods(tn string) []qm.QueryMod {
 	var andMods []qm.QueryMod
 
 	for _, w := range f.Where {
@@ -281,26 +281,26 @@ func (f *FilterColumn) mods(tn string) []qm.QueryMod {
 // Operator
 ////////////////////////////////////////////////////////////////////
 
-type Operator string
+type operator string
 
 var (
-	equal              Operator = "eq"
-	notEqual           Operator = "neq"
-	greaterThan        Operator = "gt"
-	greaterThanOrEqual Operator = "gte"
-	lessThan           Operator = "lt"
-	lessThanOrEqual    Operator = "lte"
-	in                 Operator = "in"
-	notIn              Operator = "nin"
-	contains           Operator = "c"
-	notContains        Operator = "nc"
-	startsWith         Operator = "sw"
-	endsWith           Operator = "ew"
-	null               Operator = "null"
-	or                 Operator = "or"
+	equal              operator = "eq"
+	notEqual           operator = "neq"
+	greaterThan        operator = "gt"
+	greaterThanOrEqual operator = "gte"
+	lessThan           operator = "lt"
+	lessThanOrEqual    operator = "lte"
+	in                 operator = "in"
+	notIn              operator = "nin"
+	contains           operator = "c"
+	notContains        operator = "nc"
+	startsWith         operator = "sw"
+	endsWith           operator = "ew"
+	null               operator = "null"
+	or                 operator = "or"
 )
 
-var operators = map[Operator]bool{
+var operators = map[operator]bool{
 	equal:              true,
 	notEqual:           true,
 	greaterThan:        true,
@@ -317,7 +317,7 @@ var operators = map[Operator]bool{
 	or:                 true,
 }
 
-func (o Operator) IsValid(v *any) bool {
+func (o operator) IsValid(v *any) bool {
 	if !operators[o] {
 		return false
 	}
@@ -329,7 +329,7 @@ func (o Operator) IsValid(v *any) bool {
 	return false
 }
 
-func (o Operator) acceptValueKind(v *any) bool {
+func (o operator) acceptValueKind(v *any) bool {
 	pV := *v
 	switch o {
 	case equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, contains, notContains, startsWith, endsWith:
@@ -386,11 +386,11 @@ func (o Operator) acceptValueKind(v *any) bool {
 	}
 }
 
-func (o Operator) isOr() bool {
+func (o operator) isOr() bool {
 	return o == or
 }
 
-func (o Operator) sql(c string, v any) (string, any) {
+func (o operator) sql(c string, v any) (string, any) {
 	switch o {
 	case equal:
 		return sql.Where(c, sql.Equal, "?"), v
@@ -427,7 +427,7 @@ func (o Operator) sql(c string, v any) (string, any) {
 	}
 }
 
-func (o Operator) mod(c string, v any) qm.QueryMod {
+func (o operator) mod(c string, v any) qm.QueryMod {
 	switch o {
 	case equal:
 		return qm.Where(sql.Where(c, sql.Equal, "?"), v)

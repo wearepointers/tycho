@@ -23,6 +23,7 @@ func Comments(ctx context.Context, db *sql.DB, eventID, organizationID, AccountI
 		}
 		// Avoid same created_at
 		time.Sleep(100 * time.Millisecond)
+
 	}
 
 	return nil

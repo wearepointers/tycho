@@ -8,18 +8,18 @@ import (
 // //////////////////////////////////////////////////////////////////
 // Relation
 // //////////////////////////////////////////////////////////////////
-type Relation []string
+type relation []string
 
-func (r *Relation) Apply(q *Query) {
+func (r *relation) Apply(q *Query) {
 	q.setRelation(r)
 }
 
-func (r *Relation) isEmpty() bool {
+func (r *relation) isEmpty() bool {
 	return r == nil || len(*r) <= 0
 }
 
-func (d *Dialect) ParseRelation(raw string) *Relation {
-	relation, err := utils.Unmarshal[Relation](raw)
+func (d *Dialect) ParseRelation(raw string) *relation {
+	relation, err := utils.Unmarshal[relation](raw)
 	if err != nil {
 		return nil
 	}
@@ -27,7 +27,7 @@ func (d *Dialect) ParseRelation(raw string) *Relation {
 	return relation
 }
 
-func (r *Relation) Mods() []qm.QueryMod {
+func (r *relation) Mods() []qm.QueryMod {
 	if r == nil {
 		return nil
 	}

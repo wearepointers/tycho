@@ -16,7 +16,7 @@ type test struct {
 }
 
 type testParam struct {
-	Params []query.Param
+	Params query.ParamSlice
 	SQL    testSQL
 }
 

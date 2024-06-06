@@ -6,10 +6,10 @@ import "github.com/wearepointers/tycho/utils"
 // Driver
 ////////////////////////////////////////////////////////////////////
 
-type Driver int
+type driver int
 
 const (
-	MySQL Driver = iota
+	MySQL driver = iota
 	Postgres
 )
 
@@ -17,15 +17,15 @@ const (
 // Casing
 ////////////////////////////////////////////////////////////////////
 
-type Casing int
+type casing int
 
 const (
-	PascalCase Casing = iota // Represented as PascalCase
+	PascalCase casing = iota // Represented as PascalCase
 	CamelCase                // Represented as camelCase
 	SnakeCase                // Represented as snake_case
 )
 
-func (c Casing) string(s string) string {
+func (c casing) string(s string) string {
 	switch c {
 	case PascalCase:
 		return utils.ToPascalCase(s)
@@ -45,11 +45,11 @@ func (c Casing) string(s string) string {
 type Dialect struct {
 	useIndexPlaceholders bool
 	// Exported fields
-	Driver             Driver
+	Driver             driver
 	HasAutoIncrementID bool
-	APICasing          Casing
-	DBCasing           Casing
-	PaginationType     PaginationType
+	APICasing          casing
+	DBCasing           casing
+	PaginationType     paginationType
 	MaxLimit           int
 }
 

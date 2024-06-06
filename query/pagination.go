@@ -11,25 +11,25 @@ import (
 // Pagination
 ////////////////////////////////////////////////////////////////////
 
-type PaginationType int
+type paginationType int
 
 const (
-	OffsetPaginationType PaginationType = iota
-	CursorPaginationType
+	OffsetPagination paginationType = iota
+	CursorPagination
 )
 
 type PaginationResponse = map[string]any
 
 func Paginate[T any](q *Query, data []*T) ([]*T, *PaginationResponse) {
-	if q.paginationType == OffsetPaginationType {
+	if q.paginationType == OffsetPagination {
 		return paginateOffsetPagination(q.OffsetPagination, q.dialect.APICasing, data)
 	}
 
 	return nil, nil
 }
 
-func (d *Dialect) ParsePagination(raw string) QueryMod {
-	if d.PaginationType == OffsetPaginationType {
+func (d *Dialect) ParsePagination(raw string) queryMod {
+	if d.PaginationType == OffsetPagination {
 		return d.parseOffsetPagination(raw)
 	}
 
@@ -39,25 +39,25 @@ func (d *Dialect) ParsePagination(raw string) QueryMod {
 // //////////////////////////////////////////////////////////////////
 // Offset Pagination
 // //////////////////////////////////////////////////////////////////
-type OffsetPagination struct {
+type offsetPagination struct {
 	Page  int
 	Limit int
 }
 
-func (p *OffsetPagination) Apply(q *Query) {
-	q.setPaginationType(OffsetPaginationType)
+func (p *offsetPagination) Apply(q *Query) {
+	q.setPaginationType(OffsetPagination)
 	q.setOffsetPagination(p)
 }
 
-func (p *OffsetPagination) offset() int {
+func (p *offsetPagination) offset() int {
 	return p.Page * p.Limit
 }
 
-func (p *OffsetPagination) limit() int {
+func (p *offsetPagination) limit() int {
 	return p.Limit + 1
 }
 
-func paginateOffsetPagination[T any](p *OffsetPagination, apiC Casing, data []*T) ([]*T, *PaginationResponse) {
+func paginateOffsetPagination[T any](p *offsetPagination, apiC casing, data []*T) ([]*T, *PaginationResponse) {
 	var len = len(data)
 	var cData = data
 
@@ -89,10 +89,10 @@ func paginateOffsetPagination[T any](p *OffsetPagination, apiC Casing, data []*T
 	return cData, &r
 }
 
-func (d *Dialect) parseOffsetPagination(raw string) *OffsetPagination {
-	pagination, err := utils.Unmarshal[OffsetPagination](raw)
+func (d *Dialect) parseOffsetPagination(raw string) *offsetPagination {
+	pagination, err := utils.Unmarshal[offsetPagination](raw)
 	if err != nil {
-		return &OffsetPagination{
+		return &offsetPagination{
 			Page:  0,
 			Limit: d.MaxLimit,
 		}
@@ -109,7 +109,7 @@ func (d *Dialect) parseOffsetPagination(raw string) *OffsetPagination {
 	return pagination
 }
 
-func (p *OffsetPagination) SQL() string {
+func (p *offsetPagination) SQL() string {
 	offset := p.offset()
 
 	if offset == 0 {
@@ -119,7 +119,7 @@ func (p *OffsetPagination) SQL() string {
 	return fmt.Sprintf("LIMIT %d OFFSET %d", p.limit(), offset)
 }
 
-func (p *OffsetPagination) Mods() []qm.QueryMod {
+func (p *offsetPagination) Mods() []qm.QueryMod {
 	return []qm.QueryMod{
 		qm.Limit(p.limit()),
 		qm.Offset(p.offset()),

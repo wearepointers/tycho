@@ -38,3 +38,12 @@ func Column(table, column string) string {
 func Group(s ...string) string {
 	return strings.Join(s, ", ")
 }
+
+func GeneratePlaceholders(count int) []string {
+	placeholders := make([]string, count)
+	for i := 0; i < count; i++ {
+		placeholders[i] = "?"
+	}
+
+	return placeholders
+}

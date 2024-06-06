@@ -8,21 +8,21 @@ import (
 
 var paramInputs = []testParam{
 	{
-		Params: []query.Param{{Column: "id", Value: "1"}},
+		Params: query.ParamSlice{query.NewParam("id", "1")},
 		SQL: testSQL{
 			SQL:     createTestSQL(`"{{table}}"."id" = ?`),
 			SQLArgs: []any{"1"},
 		},
 	},
 	{
-		Params: []query.Param{{Column: "id", Value: "1"}, {Column: "account_id", Value: "324"}},
+		Params: query.ParamSlice{query.NewParam("id", "1"), query.NewParam("account_id", "324")},
 		SQL: testSQL{
 			SQL:     createTestSQL(`"({{table}}"."id" = ? AND "{{table}}"."account_id" = ?)`),
 			SQLArgs: []any{"1", "324"},
 		},
 	},
 	{
-		Params: []query.Param{{Column: "id", Value: "1"}, {Column: "account_id", Value: "324"}, {Column: "event_id", Value: "523532"}},
+		Params: query.ParamSlice{query.NewParam("id", "1"), query.NewParam("account_id", "324"), query.NewParam("event_id", "523532")},
 		SQL: testSQL{
 			SQL:     createTestSQL(`"({{table}}"."id" = ? AND "{{table}}"."account_id" = ? AND "{{table}}"."event_id" = ?)`),
 			SQLArgs: []any{"1", "324", "523532"},

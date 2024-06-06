@@ -14,7 +14,7 @@ var dialect = query.Dialect{
 	HasAutoIncrementID: false,
 	APICasing:          query.CamelCase,
 	DBCasing:           query.SnakeCase,
-	PaginationType:     query.OffsetPaginationType,
+	PaginationType:     query.OffsetPagination,
 	MaxLimit:           10,
 }
 
@@ -41,7 +41,7 @@ func (r *Router) list(c *gin.Context) {
 
 func (r *Router) get(c *gin.Context) {
 	relation := dialect.ParseRelation(c.Query("expand"))
-	params := dialect.ParseParams(query.Param{Column: dm.EventColumns.ID, Value: c.Param("id")})
+	params := dialect.ParseParams(query.NewParam(dm.EventColumns.ID, c.Param("id")))
 	q := dialect.NewQuery(relation, params)
 
 	record, err := dm.Events(q.Mods(table)...).One(c, r.db)
@@ -58,7 +58,7 @@ func (r *Router) listComments(c *gin.Context) {
 	sort := dialect.ParseSort(c.Query("sort"), nil)
 	relation := dialect.ParseRelation(c.Query("expand"))
 
-	params := dialect.ParseParams(query.Param{Column: dm.CommentColumns.EventID, Value: c.Param("id")})
+	params := dialect.ParseParams(query.NewParam(dm.CommentColumns.EventID, c.Param("id")))
 
 	rawPagination := dialect.ParsePagination(c.Query("pagination"))
 	q := dialect.NewQuery(rawPagination, filter, sort, relation, params)

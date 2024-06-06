@@ -33,10 +33,7 @@ func WhereIn(s string, v any) (string, any) {
 	}
 
 	count := len(val)
-	placeholders := make([]string, count)
-	for i := 0; i < count; i++ {
-		placeholders[i] = "?"
-	}
+	placeholders := GeneratePlaceholders(count)
 
 	return Where(s, In, fmt.Sprintf("(%s)", Group(placeholders...))), v
 }
@@ -48,10 +45,7 @@ func WhereNotIn(s string, v any) (string, any) {
 	}
 
 	count := len(val)
-	placeholders := make([]string, count)
-	for i := 0; i < count; i++ {
-		placeholders[i] = "?"
-	}
+	placeholders := GeneratePlaceholders(count)
 
 	return Where(s, NotIn, fmt.Sprintf("(%s)", Group(placeholders...))), v
 }

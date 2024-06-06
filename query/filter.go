@@ -46,9 +46,9 @@ func (f *filter) isEmpty() bool {
 type filterMap map[string]json.RawMessage
 type filterMapColumn map[operator]json.RawMessage
 
-type validateColumn func(k string) bool
+type ValidatorFunc func(k string) bool
 
-func (d *Dialect) ParseFilter(raw string, validateFunc validateColumn) *filter {
+func (d *Dialect) ParseFilter(raw string, validateFunc ValidatorFunc) *filter {
 	filterMap, err := utils.Unmarshal[filterMap](raw)
 	if err != nil {
 		return nil
@@ -57,7 +57,7 @@ func (d *Dialect) ParseFilter(raw string, validateFunc validateColumn) *filter {
 	return filterMap.parse(validateFunc, d.DBCasing)
 }
 
-func (fm *filterMap) parse(validateFunc validateColumn, dbCasing casing) *filter {
+func (fm *filterMap) parse(validateFunc ValidatorFunc, dbCasing casing) *filter {
 	if fm == nil {
 		return nil
 	}

@@ -32,6 +32,25 @@ import (
    "github.com/gin-gonic/gin"
 )
 
+// To prevent filtering/sorting on columns that don't exist or shouldn't be filtered/sorted on
+// Have this somewhere in your code
+var tablesWithColumnsMap = map[string]map[string]bool{
+	"event": {
+		"id":   true,
+		"name": true,
+		"url":  true,
+		"tag":  false,
+		"domain": true,
+		// ...
+	},
+}
+
+var validateFunc = func(table string) query.ValidatorFunc {
+	return func(dbKey string) bool {
+		return tablesWithColumnsMap[table][dbKey]
+	}
+}
+
 // Place this at 1 place in your code.
 var dialect = query.Dialect{
 	Driver:             query.Postgres,
@@ -42,17 +61,21 @@ var dialect = query.Dialect{
 	MaxLimit:           10,
 }
 
+// Have this in your API controller
+var table = dm.TableNames.Event
+
+
 // GET /events
 func (r *Router) list(c *gin.Context) {
-	filter := dialect.ParseFilter(c.Query("filter"), nil)
-	sort := dialect.ParseSort(c.Query("sort"), nil)
+	filter := dialect.ParseFilter(c.Query("filter"), validateFunc(table))
+	sort := dialect.ParseSort(c.Query("sort"), nil) // You can also add the validation function here
 	relation := dialect.ParseRelation(c.Query("expand"))
 
 	rawPagination := dialect.ParsePagination(c.Query("pagination"))
 	q := dialect.NewQuery(rawPagination, filter, sort, relation)
 
-	sqlBoilerMods := q.Mods(dm.TableNames.Event)
-	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
+	sqlBoilerMods := q.Mods(table)
+	tychoSQL, tychoArgs := q.SQL(table)
 
 	records, err := dm.Events(sqlBoilerMods...).All(c, r.db)
 	if err != nil {
@@ -77,8 +100,8 @@ func (r *Router) get(c *gin.Context) {
 	params := dialect.ParseParams(query.NewParam(dm.EventColumns.ID, c.Param("id")))
 	q := dialect.NewQuery(relation, params)
 
-  sqlBoilerMods := q.Mods(dm.TableNames.Event)
-	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
+  sqlBoilerMods := q.Mods(table)
+	tychoSQL, tychoArgs := q.SQL(table)
 
 	record, err := dm.Events(sqlBoilerMods...).One(c, r.db)
 	if err != nil {
@@ -105,8 +128,8 @@ func (r *Router) listComments(c *gin.Context) {
 	rawPagination := dialect.ParsePagination(c.Query("pagination"))
 	q := dialect.NewQuery(rawPagination, filter, sort, relation, params)
 
-	sqlBoilerMods := q.Mods(dm.TableNames.Event)
-	tychoSQL, tychoArgs := q.SQL(dm.TableNames.Event)
+	sqlBoilerMods := q.Mods(table)
+	tychoSQL, tychoArgs := q.SQL(table)
 
 	records, err := dm.Comments(sqlBoilerMods...).All(c, r.db)
 	if err != nil {

@@ -18,8 +18,25 @@ var dialect = query.Dialect{
 	MaxLimit:           10,
 }
 
+var tablesWithColumnsMap = map[string]map[string]bool{
+	"event": {
+		"id":     true,
+		"name":   true,
+		"url":    true,
+		"tag":    false,
+		"domain": true,
+		// ...
+	},
+}
+
+var validateFunc = func(table string) query.ValidatorFunc {
+	return func(dbKey string) bool {
+		return tablesWithColumnsMap[table][dbKey]
+	}
+}
+
 func (r *Router) list(c *gin.Context) {
-	filter := dialect.ParseFilter(c.Query("filter"), nil)
+	filter := dialect.ParseFilter(c.Query("filter"), validateFunc(table))
 	sort := dialect.ParseSort(c.Query("sort"), nil)
 	relation := dialect.ParseRelation(c.Query("expand"))
 

@@ -34,12 +34,12 @@ func (s *sort) isEmpty() bool {
 	return s == nil || len(s.Columns) <= 0
 }
 
-func (d *Dialect) ParseSort(raw string, validateFunc validateColumn) *sort {
+func (d *Dialect) ParseSort(raw string, validateFunc ValidatorFunc) *sort {
 	sortColumnSlice, _ := utils.Unmarshal[sortColumnSlice](raw)
 	return sortColumnSlice.parse(validateFunc, d.DBCasing)
 }
 
-func (scs *sortColumnSlice) parse(validateFunc validateColumn, dbCasing casing) *sort {
+func (scs *sortColumnSlice) parse(validateFunc ValidatorFunc, dbCasing casing) *sort {
 	var defaultOrderBy = sql.ASC
 
 	if scs == nil {

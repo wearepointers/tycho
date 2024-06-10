@@ -110,10 +110,10 @@ func (r *Router) get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-    "tychoSQL":         tychoSQL,
+    	"tychoSQL":         tychoSQL,
 		"tychoArgs":        tychoArgs,
 		"sqlBoilerMods":    sqlBoilerMods,
-    "record": record,
+    	"record":	 		record,
   })
 }
 

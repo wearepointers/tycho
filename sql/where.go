@@ -2,8 +2,8 @@ package sql
 
 import (
 	"fmt"
-	"reflect"
-	"strings"
+
+	"github.com/wearepointers/tycho/utils"
 )
 
 func WhereComposite[T any](op Operator, cols []T, f func(c T) string) string {
@@ -23,35 +23,31 @@ func Where(s string, op Operator, v ...string) string {
 		j = append(j, v...)
 	}
 
-	return strings.Join(j, " ")
+	return Query(j...)
 }
 
 func WhereIn(s string, v any) (string, any) {
-	if reflect.TypeOf(v).Kind() != reflect.Slice {
+	isSlice, val := utils.IsSlice[any](v)
+	if !isSlice {
 		return "", nil
 	}
 
-	count := len(v.([]any))
-	placeholders := make([]string, count)
-	for i := 0; i < count; i++ {
-		placeholders[i] = "?"
-	}
+	count := len(val)
+	placeholders := GeneratePlaceholders(count)
 
-	return Where(s, In, fmt.Sprintf("(%s)", strings.Join(placeholders, ", "))), v
+	return Where(s, In, fmt.Sprintf("(%s)", Group(placeholders...))), v
 }
 
 func WhereNotIn(s string, v any) (string, any) {
-	if reflect.TypeOf(v).Kind() != reflect.Slice {
+	isSlice, val := utils.IsSlice[any](v)
+	if !isSlice {
 		return "", nil
 	}
 
-	count := len(v.([]any))
-	placeholders := make([]string, count)
-	for i := 0; i < count; i++ {
-		placeholders[i] = "?"
-	}
+	count := len(val)
+	placeholders := GeneratePlaceholders(count)
 
-	return Where(s, NotIn, fmt.Sprintf("(%s)", strings.Join(placeholders, ", "))), v
+	return Where(s, NotIn, fmt.Sprintf("(%s)", Group(placeholders...))), v
 }
 
 func WhereLike(s string, v any) (string, any) {

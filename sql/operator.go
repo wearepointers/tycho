@@ -28,7 +28,7 @@ const (
 	In                 Operator = "IN"
 	NotIn              Operator = "NOT IN"
 	Like               Operator = "LIKE"
-	ILIkE              Operator = "ILIKE"
+	ILike              Operator = "ILIKE"
 	NotLike            Operator = "NOT LIKE"
 	IsNull             Operator = "IS NULL"
 	IsNotNull          Operator = "IS NOT NULL"

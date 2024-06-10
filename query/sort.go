@@ -1,25 +1,28 @@
 package query
 
 import (
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
 	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
-type Sort struct {
-	filterAllowedOnColumns TableColumns
-	columnsInMap           map[string]int
-	columns                SortColumnSlice
-	defaultOrderBy         sql.Order
+// //////////////////////////////////////////////////////////////////
+// Sort
+// //////////////////////////////////////////////////////////////////
+
+type sort struct {
+	ColumnsInMap   map[string]int
+	Columns        sortColumnSlice
+	DefaultOrderBy sql.Order
 }
 
-type SortColumnSlice []SortColumn
-type SortColumn struct {
+type sortColumnSlice []sortColumn
+type sortColumn struct {
 	Column string
 	Order  sql.Order
 }
 
-func (s *Sort) Apply(q *Query) {
+func (s *sort) Apply(q *Query) {
 	if s == nil {
 		return
 	}
@@ -27,34 +30,37 @@ func (s *Sort) Apply(q *Query) {
 	q.setSort(s)
 }
 
-// [{"colunn":"name", "order":"ASC"}]
-
-func ParseSort(raw string, allowedColumns TableColumns) *Sort {
-	sortColumnSlice, _ := utils.Unmarshal[SortColumnSlice](raw)
-	return sortColumnSlice.parse(allowedColumns)
+func (s *sort) isEmpty() bool {
+	return s == nil || len(s.Columns) <= 0
 }
 
-func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort {
+func (d *Dialect) ParseSort(raw string, validateFunc ValidatorFunc) *sort {
+	sortColumnSlice, _ := utils.Unmarshal[sortColumnSlice](raw)
+	return sortColumnSlice.parse(validateFunc, d.DBCasing)
+}
+
+func (scs *sortColumnSlice) parse(validateFunc ValidatorFunc, dbCasing casing) *sort {
 	var defaultOrderBy = sql.ASC
 
-	if sortColumnSlice == nil {
-		return &Sort{filterAllowedOnColumns: allowedColumns, defaultOrderBy: defaultOrderBy}
+	if scs == nil {
+		return &sort{DefaultOrderBy: defaultOrderBy}
 	}
 
-	var columns []SortColumn
+	var columns []sortColumn
 	var columnsInMap = make(map[string]int)
 
 	var i int
-	for _, sortColumn := range *sortColumnSlice {
-		if !sortColumn.Order.IsValid() || !allowedColumns.Has(sortColumn.Column) {
+	for _, sortColumn := range *scs {
+		if !sortColumn.Order.IsValid() || (validateFunc != nil && !validateFunc(sortColumn.Column)) {
 			continue
 		}
+
+		sortColumn.Column = dbCasing.string(sortColumn.Column) // Makes the column case agnostic
 
 		// Duplicate catch
 		if _, ok := columnsInMap[sortColumn.Column]; ok {
 			continue
 		}
-
 		columns = append(columns, sortColumn)
 		columnsInMap[sortColumn.Column] = i
 		i++
@@ -64,60 +70,55 @@ func (sortColumnSlice *SortColumnSlice) parse(allowedColumns TableColumns) *Sort
 		defaultOrderBy = columns[0].Order
 	}
 
-	return &Sort{
-		filterAllowedOnColumns: allowedColumns,
-		columns:                columns,
-		columnsInMap:           columnsInMap,
-		defaultOrderBy:         defaultOrderBy,
+	return &sort{
+		Columns:        columns,
+		ColumnsInMap:   columnsInMap,
+		DefaultOrderBy: defaultOrderBy,
 	}
 }
 
-func (s *Sort) isEmpty() bool {
-	return s != nil && len(s.columns) <= 0
-}
+// func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
+// 	columns := f(s.DefaultOrderBy)
 
-func (s *Sort) SetDefault(f func(o sql.Order) []SortColumn) {
-	columns := f(s.defaultOrderBy)
+// 	if len(s.Columns) <= 0 {
+// 		s.Columns = columns
+// 		return
+// 	}
 
-	if s.isEmpty() {
-		s.columns = columns
-		return
-	}
+// 	// This overwrites any sort
+// 	for _, column := range columns {
+// 		index, ok := s.ColumnsInMap[column.Column]
+// 		if !ok {
+// 			s.Columns = append(s.Columns, column)
+// 			continue
+// 		}
 
-	// This overwrites any sort
-	for _, column := range columns {
-		index, ok := s.columnsInMap[column.Column]
-		if !ok {
-			s.columns = append(s.columns, column)
-			continue
-		}
+// 		s.Columns = append(s.Columns[:index], s.Columns[index+1:]...) // Remove
+// 		s.Columns = append(s.Columns, column)                         // Add to end
+// 		s.ColumnsInMap[column.Column] = len(s.Columns) - 1            // Update index
+// 	}
+// }
 
-		s.columns = append(s.columns[:index], s.columns[index+1:]...) // Remove
-		s.columns = append(s.columns, column)                         // Add to end
-		s.columnsInMap[column.Column] = len(s.columns) - 1            // Update index
-	}
-}
-
-func (s *Sort) SQL(tn string) string {
-	if len(s.columns) <= 0 {
+func (s *sort) SQL(tn string) string {
+	if s == nil || len(s.Columns) <= 0 {
 		return ""
 	}
 
 	var orders []string
-	for _, f := range s.columns {
-		orders = append(orders, sql.Column(tn, f.Column), f.Order.String())
+	for _, f := range s.Columns {
+		orders = append(orders, sql.Query(sql.Column(tn, f.Column), f.Order.String()))
 	}
 
-	return sql.Group(orders...)
+	return sql.Query(string(sql.ORDER_BY), sql.Group(orders...))
 }
 
-func (s *Sort) Mods(tn string) []qm.QueryMod {
-	if len(s.columns) <= 0 {
+func (s *sort) Mods(tn string) []qm.QueryMod {
+	if s == nil || len(s.Columns) <= 0 {
 		return nil
 	}
 
 	var mods []qm.QueryMod
-	for _, f := range s.columns {
+	for _, f := range s.Columns {
 		mods = append(mods, qm.OrderBy(sql.Query(sql.Column(tn, f.Column), f.Order.String())))
 	}
 

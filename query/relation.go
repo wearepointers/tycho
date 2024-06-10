@@ -1,20 +1,25 @@
 package query
 
 import (
-	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/strmangle"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/wearepointers/tycho/utils"
 )
 
-// ["relation", "otherrelation"]
-type Relation []string
+// //////////////////////////////////////////////////////////////////
+// Relation
+// //////////////////////////////////////////////////////////////////
+type relation []string
 
-func (r *Relation) Apply(q *Query) {
+func (r *relation) Apply(q *Query) {
 	q.setRelation(r)
 }
 
-func ParseRelation(raw string) *Relation {
-	relation, err := utils.Unmarshal[Relation](raw)
+func (r *relation) isEmpty() bool {
+	return r == nil || len(*r) <= 0
+}
+
+func (d *Dialect) ParseRelation(raw string) *relation {
+	relation, err := utils.Unmarshal[relation](raw)
 	if err != nil {
 		return nil
 	}
@@ -22,7 +27,7 @@ func ParseRelation(raw string) *Relation {
 	return relation
 }
 
-func (r *Relation) Mods() []qm.QueryMod {
+func (r *relation) Mods() []qm.QueryMod {
 	if r == nil {
 		return nil
 	}
@@ -30,7 +35,7 @@ func (r *Relation) Mods() []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	for _, relation := range *r {
-		mods = append(mods, qm.Load(strmangle.TitleCase(relation), qm.Limit(10)))
+		mods = append(mods, qm.Load(utils.ToPascalCase(relation), qm.Limit(10)))
 	}
 
 	return mods

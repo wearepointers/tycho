@@ -35,7 +35,7 @@ func (r *relation) Mods() []qm.QueryMod {
 	var mods []qm.QueryMod
 
 	for _, relation := range *r {
-		mods = append(mods, qm.Load(utils.ToPascalCase(relation), qm.Limit(10)))
+		mods = append(mods, qm.Load(utils.ToPascalCase(relation)))
 	}
 
 	return mods

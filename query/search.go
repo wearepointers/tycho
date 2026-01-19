@@ -3,8 +3,8 @@ package query
 import (
 	"fmt"
 
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type Search struct {

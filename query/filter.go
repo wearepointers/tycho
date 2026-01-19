@@ -3,9 +3,9 @@ package query
 import (
 	"encoding/json"
 
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/wearepointers/tycho/sql"
 	"github.com/wearepointers/tycho/utils"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type Filter struct {
